@@ -48,7 +48,7 @@ function voxWorkletModule() {
       this.N = 1 << 15; this.mask = this.N - 1;
       this.x = new Float32Array(this.N); this.y = new Float32Array(this.N); this.ws = new Float32Array(this.N);
       this.n = 0;
-      this.p = { key: 9, scale: 'minor', speed: 25, amount: 1, range: 'mid', humanize: 0, flex: 0, tracking: 50, transpose: 0, hyst: 0.05 };
+      this.p = { key: 9, scale: 'minor', ref: 440, speed: 25, amount: 1, range: 'mid', humanize: 0, flex: 0, tracking: 50, transpose: 0, hyst: 0.05 };
       if (opts && opts.processorOptions) Object.assign(this.p, opts.processorOptions);
       // история измерений: время (сэмпл входа), период, есть ли голос, сглаженная коррекция
       this.hT = new Float32Array(HIST); this.hTime = new Float64Array(HIST); this.hV = new Uint8Array(HIST);
@@ -166,7 +166,9 @@ function voxWorkletModule() {
       T = this.medianT(T);
       this.unvoicedRun = 0; this.voiced = true; this.T = T;
       const P = this.p;
-      const midi = 69 + 12 * Math.log2(this.sr / T / 440);
+      // опорная частота (Reference Pitch): f(n) = ref · 2^((n − 69) / 12), ref 415.3…466.2 Гц (±100 центов от 440)
+      const ref = Math.min(466.2, Math.max(415.3, +P.ref || 440));
+      const midi = 69 + 12 * Math.log2(this.sr / T / ref);
       const sc = SCALES[P.scale] || SCALES.chromatic, key = (+P.key) | 0;
       const ok = (m) => sc.indexOf((((m - key) % 12) + 12) % 12) >= 0;
       let best = -1, bd = 1e9;

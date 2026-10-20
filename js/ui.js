@@ -22,7 +22,7 @@
     beat: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5"/>',
     dots: '<circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/>',
     close: '<path d="M6 6l12 12M18 6 6 18"/>',
-    gear: '<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/>',
+    gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
     power: '<path d="M12 3v8"/><path d="M6.3 7.5a8 8 0 1 0 11.4 0"/>',
     plus: '<path d="M12 5v14M5 12h14"/>'
   };
@@ -126,6 +126,14 @@
   layer.addEventListener('pointerdown', (e) => { if (e.target === layer) Object.keys(wins).forEach(closeWindow); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && Object.keys(wins).length) { e.preventDefault(); Object.keys(wins).forEach(closeWindow); } });
 
+  /* ------------------------------ ТОСТ (короткое уведомление) ------------------------------ */
+  let toastEl = null, toastTimer = 0;
+  Vox.on('toast', (text) => {
+    if (!toastEl) { toastEl = el('div', 'toast'); toastEl.setAttribute('role', 'status'); document.body.appendChild(toastEl); }
+    toastEl.textContent = text; toastEl.classList.add('show');
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => toastEl.classList.remove('show'), 4500);
+  });
+
   /* ------------------------------ ВЕРХНЯЯ ПАНЕЛЬ ------------------------------ */
   // Play/Pause как в BandLab: пауза оставляет курсор на месте, «в начало» — отдельной кнопкой
   function playPause() {
@@ -140,7 +148,7 @@
   }
   function toggleLoop() {
     const L = st.loop, pos = st.playing ? Vox.currentBeat() : st.posBeats;
-    if (!L.on && (pos < L.start || pos >= L.end) && pos > 0) { const s = Math.floor(pos / 4) * 4; Vox.setLoop({ on: true, start: s, end: s + 16 }); }
+    if (!L.on && (pos < L.start || pos >= L.end)) { const s = Math.floor(pos / 4) * 4; Vox.setLoop({ on: true, start: s, end: s + 16 }); }
     else Vox.setLoop({ on: !L.on });
     Vox.hint(st.loop.on ? 'Цикл: такты ' + (st.loop.start / 4 + 1) + '–' + (st.loop.end / 4 + 1) + '. Края цикла тянутся на линейке' : 'Цикл выключен');
   }
@@ -175,6 +183,7 @@
   });
   Vox.on('key', () => {
     syncKey();
+    if (drawer.dataset.pane === 'fx') renderFxPane(); // подпись тональности на карточках автотюна
     // открытое окно автотюна показывает старую тональность — пересобрать
     Object.keys(wins).forEach((id) => { const [, i, k] = id.split('-').map(Number); const s = st.mixer[i] && st.mixer[i].fx[k]; if (s && s.type === 'autotune') { closeWindow(id); openPlugin(i, k); } });
   });
@@ -266,7 +275,9 @@
       h.dataset.track = ti; h.style.setProperty('--c', 'var(--clip-' + tr.color + ')');
       const top = el('div', 'h-top');
       const num = el('span', 'h-num', String(ti + 1).padStart(2, '0'));
-      const icon = el('span', 'h-ico'); icon.appendChild(ico(isBeatTrack(tr) ? 'beat' : 'mic'));
+      const icon = el('span', 'h-ico h-grip'); icon.appendChild(ico(isBeatTrack(tr) ? 'beat' : 'mic'));
+      icon.title = 'Тяни вверх или вниз — переставить трек';
+      dragTrack(icon, h, ti);
       const name = el('span', 'h-name', tr.name); name.title = 'Двойной клик — переименовать';
       name.ondblclick = (e) => { e.stopPropagation(); renameInline(name, tr.name, (v) => { tr.name = v; renderPlaylist(); renderBrowser(); syncRecPane(); }); };
       const more = el('button', 'h-more'); more.appendChild(ico('dots')); more.title = 'Настройки трека'; more.setAttribute('aria-label', 'Настройки трека ' + tr.name);
@@ -298,6 +309,7 @@
       const mc = el('canvas', 'h-meter'); mc.width = 160; mc.height = 2; trackMeters.push({ c: mc, i: tr.insert });
       h.append(top, mid, bot, mc);
       h.onclick = (e) => {
+        if (trackDragged) { trackDragged = false; return; }
         if (Vox.isMobile() && e.target.closest('.h-top')) { openTrackSheet(ti); return; }
         selectTrack(ti);
       };
@@ -337,6 +349,42 @@
       blk.style.width = Vox.songBeats() * ppb + 'px'; pl.appendChild(blk);
     }
     lanes.appendChild(pl);
+  }
+
+  // Порядок треков: тянуть за иконку трека (мышь или палец), или ↑ / ↓ в меню ⋯
+  let trackDragged = false;
+  function moveTrack(from, to) {
+    to = clamp(to, 0, st.tracks.length - 1);
+    if (from === to || !st.tracks[from]) return;
+    const sel = st.tracks[st.selectedTrack];
+    const [t] = st.tracks.splice(from, 1); st.tracks.splice(to, 0, t);
+    st.selectedTrack = Math.max(0, st.tracks.indexOf(sel));
+    Vox.emit('tracks'); Vox.history.schedule();
+  }
+  function dragTrack(handle, head, ti) {
+    handle.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0 && e.pointerType === 'mouse') return;
+      e.stopPropagation(); e.preventDefault(); handle.setPointerCapture(e.pointerId);
+      const y0 = e.clientY, list = [...heads.querySelectorAll('.head[data-track]')];
+      const rects = list.map((x) => x.getBoundingClientRect());
+      let to = ti, moved = false;
+      const mv = (ev) => {
+        const dy = ev.clientY - y0;
+        if (!moved && Math.abs(dy) < 5) return;
+        if (!moved) { moved = true; head.classList.add('dragging'); }
+        head.style.transform = 'translateY(' + dy + 'px)';
+        const y = rects[ti].top + rects[ti].height / 2 + dy;
+        to = rects.filter((r, n) => n !== ti && r.top + r.height / 2 < y).length; // сколько треков окажется выше
+        list.forEach((x, n) => { x.classList.toggle('drop-before', n === to && to < ti); x.classList.toggle('drop-after', n === to && to > ti); });
+      };
+      const up = () => {
+        handle.removeEventListener('pointermove', mv); handle.removeEventListener('pointerup', up); handle.removeEventListener('pointercancel', up);
+        list.forEach((x) => x.classList.remove('drop-before', 'drop-after'));
+        head.classList.remove('dragging'); head.style.transform = '';
+        if (moved) { trackDragged = true; setTimeout(() => (trackDragged = false), 0); moveTrack(ti, to); if (to !== ti) Vox.hint('Трек «' + st.tracks[to].name + '» перемещён на позицию ' + (to + 1)); }
+      };
+      handle.addEventListener('pointermove', mv); handle.addEventListener('pointerup', up); handle.addEventListener('pointercancel', up);
+    });
   }
 
   function renameInline(node, value, done) {
@@ -469,30 +517,40 @@
     }
   }
 
-  // линейка: клик — курсор; протяжка — новый цикл; края и тело цикла тянутся (шаг — доля, с Shift — такт)
+  // Линейка: клик или протяжка — курсор (скраб, во время игры — пауза и продолжение с нового места).
+  // Цикл видно и можно тянуть, только когда он включён (⟳ / L); Shift+протяжка — нарисовать новый цикл;
+  // двойной клик по линейке или полосе цикла — сбросить цикл.
   function renderLoop() {
     const L = st.loop;
-    loopEl.hidden = false;
+    loopEl.hidden = !L.on;
     loopEl.classList.toggle('on', L.on);
     loopEl.style.left = L.start * ppb + 'px'; loopEl.style.width = (L.end - L.start) * ppb + 'px';
-    loopEl.title = 'Цикл ' + (L.on ? '(вкл)' : '(выкл)') + ': доли ' + (L.start + 1) + '–' + L.end + '. Тяни края или середину; L — вкл/выкл';
+    loopEl.title = 'Цикл: доли ' + (L.start + 1) + '–' + L.end + '. Тяни края или середину; двойной клик — сбросить; L — вкл/выкл';
     $('playlist').classList.toggle('looping', L.on);
   }
   if (!loopEl.querySelector('.lh')) loopEl.append(el('i', 'lh l'), el('i', 'lh r'));
   const beatAt = (clientX) => (clientX - ruler.getBoundingClientRect().left) / ppb;
+  let scrubbing = false;
   ruler.addEventListener('pointerdown', (e) => {
-    if (e.button === 2) return;
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
     e.preventDefault(); ruler.setPointerCapture(e.pointerId);
     const L = st.loop, b0 = beatAt(e.clientX), x0 = e.clientX;
-    const part = e.target.closest('.lh') ? (e.target.classList.contains('l') ? 'l' : 'r') : e.target.closest('.loop-region') && L.on ? 'body' : null;
+    const onLoop = L.on && e.target.closest('.loop-region');
+    const mode = onLoop ? (e.target.closest('.lh') ? (e.target.classList.contains('l') ? 'l' : 'r') : 'body') : e.shiftKey ? 'new' : 'scrub';
     const s0 = L.start, e0 = L.end;
-    let mode = part, moved = false;
-    const snapB = (b, ev) => { const q = ev.shiftKey ? 4 : 1; return Math.round(b / q) * q; };
+    let moved = false, wasPlaying = false;
+    const snapB = (b, ev) => { const q = ev.shiftKey && mode !== 'new' ? 4 : 1; return Math.round(b / q) * q; };
+    const scrubTo = (b) => { st.posBeats = Math.max(0, b); };
+    if (mode === 'scrub') {
+      wasPlaying = st.playing && !st.recording;
+      if (st.playing && !st.recording) { Vox.stop(); }
+      if (!st.recording) { scrubbing = true; scrubTo(b0); ruler.classList.add('scrub'); }
+    }
     const mv = (ev) => {
-      if (Math.abs(ev.clientX - x0) > 5) moved = true;
-      if (!moved) return;
+      if (Math.abs(ev.clientX - x0) > 4) moved = true;
       const b = beatAt(ev.clientX);
-      if (!mode) mode = 'new';
+      if (mode === 'scrub') { if (scrubbing) scrubTo(b); return; }
+      if (!moved) return;
       if (mode === 'l') L.start = clamp(snapB(b, ev), 0, e0 - 1);
       else if (mode === 'r') L.end = Math.max(s0 + 1, snapB(b, ev));
       else if (mode === 'body') { const d = snapB(b - b0, ev); L.start = Math.max(0, s0 + d); L.end = L.start + (e0 - s0); }
@@ -501,9 +559,19 @@
     };
     const up = () => {
       ruler.removeEventListener('pointermove', mv); ruler.removeEventListener('pointerup', up); ruler.removeEventListener('pointercancel', up);
-      if (moved) { Vox.setLoop({}); Vox.history.schedule(); } else Vox.setPosition(Math.max(0, Math.round(b0)));
+      ruler.classList.remove('scrub');
+      if (mode === 'scrub') {
+        if (!scrubbing) return;
+        scrubbing = false;
+        if (wasPlaying) Vox.play(); else Vox.emit('transport');
+      } else if (moved) { Vox.setLoop({}); Vox.history.schedule(); }
     };
     ruler.addEventListener('pointermove', mv); ruler.addEventListener('pointerup', up); ruler.addEventListener('pointercancel', up);
+  });
+  ruler.addEventListener('dblclick', () => {
+    if (!st.loop.on) return;
+    Vox.setLoop({ on: false }); Vox.history.schedule();
+    Vox.hint('Цикл сброшен. Включить снова — кнопка ⟳ или L');
   });
 
   $('zoomIn').onclick = () => { ppb = Math.min(96, ppb * 1.25); renderPlaylist(); };
@@ -588,7 +656,14 @@
       del.disabled = st.tracks.length < 2;
       del.onclick = () => { closeSheet(); deleteTrack(ti); };
       acts.append(fx, dup, del);
-      sh.append(ctl, acts);
+      const order = el('div', 'sheet-acts');
+      const upB = el('button', 'sheet-btn', '↑ Выше'), dnB = el('button', 'sheet-btn', '↓ Ниже');
+      upB.title = 'Переместить трек вверх'; dnB.title = 'Переместить трек вниз';
+      upB.disabled = ti === 0; dnB.disabled = ti === st.tracks.length - 1;
+      upB.onclick = () => { moveTrack(ti, ti - 1); openTrackSheet(ti - 1); };
+      dnB.onclick = () => { moveTrack(ti, ti + 1); openTrackSheet(ti + 1); };
+      order.append(upB, dnB);
+      sh.append(ctl, order, acts);
       return fx;
     });
   }
@@ -709,7 +784,11 @@
       targets.forEach((j) => {
         const row = el('div', 'send-row' + (st.mixer[j].ret ? ' ret' : ''));
         const can = Vox.isRouted(i, j) || Vox.canRoute(i, j);
-        const lab = el('span', 'sr-name', st.mixer[j].name); lab.title = insertLabel(j);
+        const lab = el('button', 'sr-name'); lab.append(el('span', '', st.mixer[j].name), ico('gear', 'sr-gear'));
+        const fk = st.mixer[j].fx.findIndex((x) => x);
+        lab.title = fk >= 0 ? 'Настроить ' + Vox.FX[st.mixer[j].fx[fk].type].title + ' на канале ' + insertLabel(j) : 'На канале ' + insertLabel(j) + ' нет эффектов';
+        lab.setAttribute('aria-label', lab.title);
+        lab.onclick = () => { const k2 = st.mixer[j].fx.findIndex((x) => x); if (k2 >= 0) openPlugin(j, k2); else { st.selectedInsert = j; renderFxPane(); } };
         const v = (ch.sends && ch.sends[j]) || 0, out = el('output', 'sr-db', sendText(v));
         const sl = hslider({ min: 0, max: 1, value: v, def: Vox.UNITY_SEND, cls: 'send', label: 'Посыл в ' + st.mixer[j].name,
           onInput: (x) => { const keep = !st.mixer[j].ret; Vox.setSend(i, j, keep ? Math.max(x, 0.0005) : x); out.textContent = sendText(x); } });
@@ -875,7 +954,8 @@
   const sec = (v) => v.toFixed(v < 10 ? 1 : 0) + ' с';
   const GENERIC = {
     delay: [
-      { k: 'sync', type: 'select', label: 'Время', options: [['1/4', '1/4'], ['1/8', '1/8'], ['1/8.', '1/8 с точкой'], ['1/8t', '1/8 триоль'], ['1/16', '1/16'], ['1/4.', '1/4 с точкой'], ['1/2', '1/2']] },
+      { k: 'sync', type: 'select', label: 'Время', options: [['1/4', '1/4'], ['1/8', '1/8'], ['1/8.', '1/8 с точкой'], ['1/8t', '1/8 триоль'], ['1/16', '1/16'], ['1/4.', '1/4 с точкой'], ['1/2', '1/2'], ['ms', 'В мс (свободно)']] },
+      { k: 'ms', label: 'Время, мс', min: 20, max: 2000, log: true, fmt: (v) => Math.round(v) + ' мс', def: 250 },
       { k: 'pingpong', type: 'select', num: true, label: 'Режим', options: [[0, 'Обычный'], [1, 'Пинг-понг']] },
       { k: 'feedback', label: 'Feedback', min: 0, max: 0.92, fmt: pct, def: 0.32 },
       { k: 'tone', label: 'High Cut', min: 1000, max: 16000, log: true, fmt: hz, def: 5500 },
@@ -1176,6 +1256,30 @@
     row1.appendChild(field('Тип голоса', selectOf('atRange' + i + k, Object.entries(R).map(([kk, r]) => [kk, r.label]), p.range || 'mid',
       (v) => { Vox.setFxParams(i, k, { range: v }); syncLat(); })));
     wrap.appendChild(row1);
+    // опорная частота A4: 415.3…466.2 Гц (±100 центов от 440), шаг 0.1, кнопки 432 / 440
+    const refRow = el('div', 'plug-row at-ref');
+    const REF_MIN = 415.3, REF_MAX = 466.2;
+    const refNum = el('input'); refNum.type = 'number'; refNum.min = REF_MIN; refNum.max = REF_MAX; refNum.step = 0.1; refNum.id = 'atRef' + i + k;
+    refNum.setAttribute('aria-label', 'Опорная частота, Гц');
+    const centsEl = el('span', 'at-cents');
+    const refSeg = el('div', 'seg');
+    const refSl = hslider({ min: REF_MIN, max: REF_MAX, step: 0.1, value: p.ref || 440, def: 440, label: 'Опорная частота', onInput: (v) => setRef(v) });
+    function setRef(v, from) {
+      v = Math.round(clamp(+v || 440, REF_MIN, REF_MAX) * 10) / 10;
+      Vox.setFxParams(i, k, { ref: v });
+      if (from !== 'num') refNum.value = v.toFixed(1);
+      refSl.sync(v);
+      const c = Math.round(1200 * Math.log2(v / 440));
+      centsEl.textContent = c === 0 ? 'стандарт' : (c > 0 ? '+' : '') + c + ' центов';
+      refSeg.querySelectorAll('button').forEach((b) => b.classList.toggle('on', Math.abs(+b.dataset.f - v) < 0.05));
+    }
+    [432, 440].forEach((f) => { const b = el('button', '', f + ' Гц'); b.dataset.f = f; b.onclick = () => setRef(f); refSeg.appendChild(b); });
+    refNum.addEventListener('change', () => setRef(refNum.value));
+    const refBox = el('div', 'at-ref-box'); refBox.append(refSl, refNum, el('span', 'at-unit', 'Гц'), centsEl);
+    refRow.append(field('Опорная частота (A4)', refBox), field('Быстро', refSeg));
+    refRow.title = 'Подстройка под бит со сдвигом высоты: f(ноты) = A4 · 2^((n − 69) / 12)';
+    wrap.appendChild(refRow);
+    setRef(p.ref || 440);
 
     const custom = (name) => (v) => { Vox.setFxParams(i, k, { [name]: v, preset: 'custom' }); syncSeg(); };
     const row2 = el('div', 'plug-row at-knobs');

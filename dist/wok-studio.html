@@ -436,6 +436,7 @@ select { cursor: pointer; }
   font-family: var(--font-mono); font-size: 11px; color: var(--text-dim);
 }
 .ruler span { position: absolute; bottom: 0; height: 8px; border-left: 1px solid var(--line-soft); pointer-events: none; }
+.ruler.scrub { cursor: ew-resize; }
 .ruler span.bar { height: 100%; padding: 6px 0 0 5px; color: var(--text-dim); border-left-color: var(--grid-bar); }
 /* область цикла */
 .loop-region { position: absolute; top: 3px; height: 12px; z-index: 1; border-radius: 4px; background: var(--slider-track); opacity: .55; cursor: grab; }
@@ -478,6 +479,13 @@ select { cursor: pointer; }
 .h-btns { display: flex; gap: 4px; margin-left: auto; flex: none; }
 .h-bot { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .h-meter { position: absolute; left: 16px; right: 10px; bottom: 3px; height: 2px; width: calc(100% - 26px); border-radius: 1px; background: var(--meter-bg); }
+
+/* перенос трека: тянуть за иконку */
+.h-grip { cursor: grab; touch-action: none; }
+.h-grip:active { cursor: grabbing; }
+.head.dragging { z-index: 5; background: var(--bg-panel-2); box-shadow: var(--shadow-window); opacity: .95; transition: none; }
+.head.drop-before { box-shadow: inset 0 3px 0 var(--accent); }
+.head.drop-after { box-shadow: inset 0 -3px 0 var(--accent); }
 
 /* капсула эффектов «Fx …» со свечением */
 .fx-badge {
@@ -606,7 +614,12 @@ select { cursor: pointer; }
 .route-row.on .rr-led { background: var(--route); box-shadow: var(--glow-led); }
 .send-row { display: grid; grid-template-columns: minmax(0, 92px) minmax(0, 1fr) 54px 26px; align-items: center; gap: 8px; min-height: 30px; }
 .send-row.ret { grid-template-columns: minmax(0, 92px) minmax(0, 1fr) 54px; }
-.sr-name { font-size: var(--fs-s); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sr-name { min-width: 0; display: inline-flex; align-items: center; gap: 5px; padding: 0; border: 0; background: none; text-align: left;
+  font-size: var(--fs-s); white-space: nowrap; overflow: hidden; }
+.sr-name span { overflow: hidden; text-overflow: ellipsis; }
+.sr-name:hover span { text-decoration: underline; text-underline-offset: 3px; }
+.sr-gear { width: 13px; height: 13px; flex: none; opacity: .7; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.sr-name:hover .sr-gear { opacity: 1; }
 .send-row.ret .sr-name { color: var(--ret); }
 .sr-db { font-family: var(--font-mono); font-size: 10px; color: var(--text-dim); text-align: right; }
 .sr-rm { width: 26px; height: 26px; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--text-faint); display: grid; place-items: center; }
@@ -698,6 +711,18 @@ select { cursor: pointer; }
 .at-bar i { position: absolute; top: 0; bottom: 0; left: 50%; background: var(--accent); border-radius: 4px; box-shadow: var(--glow-accent); }
 .at-cap { font-size: var(--fs-xs); color: var(--text-dim); font-family: var(--font-mono); }
 .at-knobs { gap: 8px 12px; }
+.at-ref-box { display: flex; align-items: center; gap: 10px; min-width: 260px; }
+.at-ref-box .hslider { width: 150px; flex: none; }
+.at-ref-box input[type="number"] { width: 72px; height: 32px; padding: 0 8px; font-family: var(--font-mono); font-size: var(--fs-m); color: var(--text); }
+.at-unit { font-size: var(--fs-xs); color: var(--text-dim); }
+.at-cents { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--accent); min-width: 8ch; }
+
+/* тост — короткое уведомление снизу по центру */
+.toast { position: fixed; left: 50%; bottom: 44px; z-index: 130; max-width: min(520px, calc(100vw - 32px)); padding: 12px 18px;
+  transform: translate(-50%, 20px); opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s;
+  background: var(--bg-panel-2); border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--line)); border-radius: 12px;
+  box-shadow: var(--shadow-window), var(--glow-accent); font-weight: 600; color: var(--text); }
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
 
 /* EQ */
 .eq-graph { position: relative; height: 210px; background: var(--grad-lcd); border-radius: var(--radius); overflow: hidden; }
@@ -813,6 +838,10 @@ select { cursor: pointer; }
   .chip { height: 36px; }
   .menu { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 64px); left: 12px; right: 12px; width: auto; }
   .hintbar { height: 24px; line-height: 24px; font-size: var(--fs-xs); padding-inline: 10px; }
+  .toast { bottom: calc(var(--mtabs-h) + env(safe-area-inset-bottom, 0px) + 34px); }
+  .at-ref-box { min-width: 0; flex-wrap: wrap; }
+  .at-ref-box .hslider { width: 100%; height: 40px; }
+  .h-ico.h-grip { width: 30px; height: 30px; margin: -5px 0 -5px -4px; }
   .hintbar.restore { line-height: 18px; }
 
   .workspace { display: block; padding: 0; }
@@ -1293,7 +1322,7 @@ function voxWorkletModule() {
       this.N = 1 << 15; this.mask = this.N - 1;
       this.x = new Float32Array(this.N); this.y = new Float32Array(this.N); this.ws = new Float32Array(this.N);
       this.n = 0;
-      this.p = { key: 9, scale: 'minor', speed: 25, amount: 1, range: 'mid', humanize: 0, flex: 0, tracking: 50, transpose: 0, hyst: 0.05 };
+      this.p = { key: 9, scale: 'minor', ref: 440, speed: 25, amount: 1, range: 'mid', humanize: 0, flex: 0, tracking: 50, transpose: 0, hyst: 0.05 };
       if (opts && opts.processorOptions) Object.assign(this.p, opts.processorOptions);
       // история измерений: время (сэмпл входа), период, есть ли голос, сглаженная коррекция
       this.hT = new Float32Array(HIST); this.hTime = new Float64Array(HIST); this.hV = new Uint8Array(HIST);
@@ -1411,7 +1440,9 @@ function voxWorkletModule() {
       T = this.medianT(T);
       this.unvoicedRun = 0; this.voiced = true; this.T = T;
       const P = this.p;
-      const midi = 69 + 12 * Math.log2(this.sr / T / 440);
+      // опорная частота (Reference Pitch): f(n) = ref · 2^((n − 69) / 12), ref 415.3…466.2 Гц (±100 центов от 440)
+      const ref = Math.min(466.2, Math.max(415.3, +P.ref || 440));
+      const midi = 69 + 12 * Math.log2(this.sr / T / ref);
       const sc = SCALES[P.scale] || SCALES.chromatic, key = (+P.key) | 0;
       const ok = (m) => sc.indexOf((((m - key) % 12) + 12) % 12) >= 0;
       let best = -1, bd = 1e9;
@@ -1951,7 +1982,7 @@ function voxWorkletModule() {
   };
   Vox.shkaPreviewStop = (i, k) => { const f = Vox.live && Vox.live[i] && Vox.live[i].fx[k]; if (f) f.node.port.postMessage({ previewPlay: false }); };
 
-  const atMsg = (q) => ({ key: +q.key, scale: q.scale, speed: +q.speed, amount: +q.amount, range: q.range || 'mid',
+  const atMsg = (q) => ({ key: +q.key, scale: q.scale, ref: +q.ref || 440, speed: +q.speed, amount: +q.amount, range: q.range || 'mid',
     humanize: +(q.humanize || 0), flex: +(q.flex || 0), tracking: q.tracking == null ? 50 : +q.tracking, transpose: +(q.transpose || 0) });
   FX.autotune = {
     title: 'Автотюн',
@@ -1961,7 +1992,7 @@ function voxWorkletModule() {
       medium: { label: 'Средний', speed: 20, amount: 1, humanize: 20, flex: 10 },
       hard:   { label: 'Жёсткий', speed: 0,  amount: 1, humanize: 0,  flex: 0 }
     },
-    defaults: () => ({ preset: 'medium', key: 9, scale: 'minor', speed: 20, amount: 1, humanize: 20, flex: 10, tracking: 50, transpose: 0, range: 'mid' }),
+    defaults: () => ({ preset: 'medium', key: 9, scale: 'minor', ref: 440, speed: 20, amount: 1, humanize: 20, flex: 10, tracking: 50, transpose: 0, range: 'mid' }),
     ranges: { high: { label: 'Сопрано', fmin: 150 }, mid: { label: 'Альт / Тенор', fmin: 100 }, low: { label: 'Низкий мужской', fmin: 75 } },
     latency(p, sr) { const f = (FX.autotune.ranges[p.range] || FX.autotune.ranges.mid).fmin; return (2 * Math.floor(sr / f) + 64) / sr; },
     create(ctx, p, info) {
@@ -2091,7 +2122,7 @@ function voxWorkletModule() {
   /* --- Delay: эхо в темп, пинг-понг, мягкое насыщение повторов --- */
   FX.delay = {
     title: 'Delay',
-    defaults: () => ({ sync: '1/8', feedback: 0.32, dry: 1, wet: 0.25, tone: 5500, lowcut: 300, pingpong: 0, sat: 0.2 }),
+    defaults: () => ({ sync: '1/8', ms: 250, feedback: 0.32, dry: 1, wet: 0.25, tone: 5500, lowcut: 300, pingpong: 0, sat: 0.2 }),
     create(ctx, p) {
       const input = stereoIn(ctx), out = ctx.createGain(), dry = ctx.createGain(), wet = ctx.createGain();
       const merge = ctx.createChannelMerger(2);
@@ -2114,7 +2145,9 @@ function voxWorkletModule() {
       const fx = { input, output: out, isDelay: true, params: p,
         apply(q) {
           fx.params = q;
-          const t = ctx.currentTime, beat = 60 / Vox.state.bpm, dt = Math.min(3.9, (SYNC[q.sync] || 0.5) * beat);
+          const t = ctx.currentTime, beat = 60 / Vox.state.bpm;
+          // время: по темпу (1/4, 1/8, 1/8., 1/16…) или свободно в миллисекундах (sync = 'ms')
+          const dt = Math.min(3.9, Math.max(0.001, q.sync === 'ms' ? (+q.ms || 250) / 1000 : (SYNC[q.sync] || 0.5) * beat));
           const pp = q.pingpong > 0.5;
           dL.delayTime.setTargetAtTime(dt, t, 0.03);
           dR.delayTime.setTargetAtTime(dt, t, 0.03);
@@ -2918,7 +2951,81 @@ function voxWorkletModule() {
       const id = Vox.addBuffer(buf, file.name.replace(/\.[^.]+$/, ''));
       Vox.addClip(trackIdx, id, startBeat);
       Vox.hint('Добавлено: ' + file.name);
+      // бит (по треку или имени файла) — определяем его тональность и настраиваем автотюны
+      const tr = st.tracks[trackIdx];
+      if ((tr && BEAT_RE.test(tr.name)) || BEAT_RE.test(file.name)) setTimeout(() => Vox.autoKey(buf), 30);
     } catch (e) { Vox.hint('Не удалось открыть ' + file.name + '. Подойдут WAV, MP3, OGG, FLAC.'); }
+  };
+  /* ------------------------------ АВТОКЕЙ ------------------------------
+     Тональность бита: хрома-вектор (12 питч-классов) по первым 30 с и корреляция с профилями
+     Крумхансла–Шмуклера для 24 тональностей. Каждый кадр нормируется, чтобы громкие места не перевешивали. */
+  const BEAT_RE = /бит|beat|минус|инстр|instrumental|prod/i;
+  const KS_MAJ = [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88];
+  const KS_MIN = [6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17];
+  function fftInPlace(re, im) {
+    const n = re.length;
+    for (let i = 1, j = 0; i < n; i++) {
+      let bit = n >> 1; for (; j & bit; bit >>= 1) j ^= bit; j ^= bit;
+      if (i < j) { let t = re[i]; re[i] = re[j]; re[j] = t; t = im[i]; im[i] = im[j]; im[j] = t; }
+    }
+    for (let len = 2; len <= n; len <<= 1) {
+      const a = -2 * Math.PI / len, wr = Math.cos(a), wi = Math.sin(a), h = len >> 1;
+      for (let i = 0; i < n; i += len) {
+        let cr = 1, ci = 0;
+        for (let k = 0; k < h; k++) {
+          const p = i + k, q = p + h, tr = re[q] * cr - im[q] * ci, ti = re[q] * ci + im[q] * cr;
+          re[q] = re[p] - tr; im[q] = im[p] - ti; re[p] += tr; im[p] += ti;
+          const nr = cr * wr - ci * wi; ci = cr * wi + ci * wr; cr = nr;
+        }
+      }
+    }
+  }
+  function corr(a, b) {
+    const ma = a.reduce((x, y) => x + y) / 12, mb = b.reduce((x, y) => x + y) / 12;
+    let n = 0, da = 0, db = 0;
+    for (let i = 0; i < 12; i++) { n += (a[i] - ma) * (b[i] - mb); da += (a[i] - ma) ** 2; db += (b[i] - mb) ** 2; }
+    return da && db ? n / Math.sqrt(da * db) : 0;
+  }
+  // → { root (0..11, C = 0), scale ('major' | 'minor'), score, margin } или null (тишина / нет тонального материала)
+  Vox.detectKey = (buffer, maxSec) => {
+    const sr = buffer.sampleRate, len = Math.min(buffer.length, Math.floor(sr * (maxSec || 30)));
+    const N = sr > 60000 ? 32768 : 16384, hop = N >> 1;
+    if (len < N) return null;
+    const chs = []; for (let c = 0; c < buffer.numberOfChannels; c++) chs.push(buffer.getChannelData(c));
+    const win = new Float32Array(N); for (let i = 0; i < N; i++) win[i] = 0.5 - 0.5 * Math.cos(2 * Math.PI * i / N);
+    // карта бинов → питч-класс: только бины близко к ноте (±0.35 полутона), 60 Гц…5 кГц
+    const pcOf = new Int8Array(N / 2).fill(-1);
+    for (let k = 1; k < N / 2; k++) {
+      const f = k * sr / N; if (f < 60 || f > 5000) continue;
+      const m = 69 + 12 * Math.log2(f / 440), r = Math.round(m);
+      if (Math.abs(m - r) < 0.35) pcOf[k] = ((r % 12) + 12) % 12;
+    }
+    const chroma = new Float64Array(12), re = new Float64Array(N), im = new Float64Array(N), fc = new Float64Array(12);
+    for (let s0 = 0; s0 + N <= len; s0 += hop) {
+      let e = 0;
+      for (let i = 0; i < N; i++) { let v = 0; for (const d of chs) v += d[s0 + i]; v /= chs.length; re[i] = v * win[i]; im[i] = 0; e += v * v; }
+      if (e / N < 1e-7) continue; // тишина
+      fftInPlace(re, im); fc.fill(0);
+      for (let k = 1; k < N / 2; k++) { const pc = pcOf[k]; if (pc >= 0) fc[pc] += Math.sqrt(re[k] * re[k] + im[k] * im[k]); }
+      const mx = Math.max(...fc); if (mx > 0) for (let i = 0; i < 12; i++) chroma[i] += fc[i] / mx;
+    }
+    if (Math.max(...chroma) <= 0) return null;
+    const res = [];
+    for (let r = 0; r < 12; r++) {
+      const rot = (prof) => prof.map((_, i) => prof[((i - r) % 12 + 12) % 12]);
+      res.push({ root: r, scale: 'major', score: corr(chroma, rot(KS_MAJ)) }, { root: r, scale: 'minor', score: corr(chroma, rot(KS_MIN)) });
+    }
+    res.sort((x, y) => y.score - x.score);
+    return { root: res[0].root, scale: res[0].scale, score: res[0].score, margin: res[0].score - res[1].score, chroma: Array.from(chroma) };
+  };
+  Vox.autoKey = (buffer) => {
+    const k = Vox.detectKey(buffer);
+    if (!k || k.score < 0.5) { Vox.hint('Тональность бита определить не удалось — выбери KEY вручную'); return null; }
+    Vox.setProjectKey(k.root, k.scale);
+    const name = NOTE_NAMES[k.root] + ' ' + (k.scale === 'minor' ? 'min' : 'maj');
+    Vox.emit('toast', 'Определена тональность бита: ' + name + ' — автотюн настроен');
+    Vox.hint('Тональность бита: ' + name + ' (уверенность ' + Math.round(k.score * 100) + ' %). Поменять — KEY в шапке');
+    return k;
   };
   const clone = (o) => JSON.parse(JSON.stringify(o));
   Vox.findClip = (clipId) => {
@@ -3407,7 +3514,7 @@ function voxWorkletModule() {
     beat: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5"/>',
     dots: '<circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/>',
     close: '<path d="M6 6l12 12M18 6 6 18"/>',
-    gear: '<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/>',
+    gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
     power: '<path d="M12 3v8"/><path d="M6.3 7.5a8 8 0 1 0 11.4 0"/>',
     plus: '<path d="M12 5v14M5 12h14"/>'
   };
@@ -3511,6 +3618,14 @@ function voxWorkletModule() {
   layer.addEventListener('pointerdown', (e) => { if (e.target === layer) Object.keys(wins).forEach(closeWindow); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && Object.keys(wins).length) { e.preventDefault(); Object.keys(wins).forEach(closeWindow); } });
 
+  /* ------------------------------ ТОСТ (короткое уведомление) ------------------------------ */
+  let toastEl = null, toastTimer = 0;
+  Vox.on('toast', (text) => {
+    if (!toastEl) { toastEl = el('div', 'toast'); toastEl.setAttribute('role', 'status'); document.body.appendChild(toastEl); }
+    toastEl.textContent = text; toastEl.classList.add('show');
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => toastEl.classList.remove('show'), 4500);
+  });
+
   /* ------------------------------ ВЕРХНЯЯ ПАНЕЛЬ ------------------------------ */
   // Play/Pause как в BandLab: пауза оставляет курсор на месте, «в начало» — отдельной кнопкой
   function playPause() {
@@ -3525,7 +3640,7 @@ function voxWorkletModule() {
   }
   function toggleLoop() {
     const L = st.loop, pos = st.playing ? Vox.currentBeat() : st.posBeats;
-    if (!L.on && (pos < L.start || pos >= L.end) && pos > 0) { const s = Math.floor(pos / 4) * 4; Vox.setLoop({ on: true, start: s, end: s + 16 }); }
+    if (!L.on && (pos < L.start || pos >= L.end)) { const s = Math.floor(pos / 4) * 4; Vox.setLoop({ on: true, start: s, end: s + 16 }); }
     else Vox.setLoop({ on: !L.on });
     Vox.hint(st.loop.on ? 'Цикл: такты ' + (st.loop.start / 4 + 1) + '–' + (st.loop.end / 4 + 1) + '. Края цикла тянутся на линейке' : 'Цикл выключен');
   }
@@ -3560,6 +3675,7 @@ function voxWorkletModule() {
   });
   Vox.on('key', () => {
     syncKey();
+    if (drawer.dataset.pane === 'fx') renderFxPane(); // подпись тональности на карточках автотюна
     // открытое окно автотюна показывает старую тональность — пересобрать
     Object.keys(wins).forEach((id) => { const [, i, k] = id.split('-').map(Number); const s = st.mixer[i] && st.mixer[i].fx[k]; if (s && s.type === 'autotune') { closeWindow(id); openPlugin(i, k); } });
   });
@@ -3651,7 +3767,9 @@ function voxWorkletModule() {
       h.dataset.track = ti; h.style.setProperty('--c', 'var(--clip-' + tr.color + ')');
       const top = el('div', 'h-top');
       const num = el('span', 'h-num', String(ti + 1).padStart(2, '0'));
-      const icon = el('span', 'h-ico'); icon.appendChild(ico(isBeatTrack(tr) ? 'beat' : 'mic'));
+      const icon = el('span', 'h-ico h-grip'); icon.appendChild(ico(isBeatTrack(tr) ? 'beat' : 'mic'));
+      icon.title = 'Тяни вверх или вниз — переставить трек';
+      dragTrack(icon, h, ti);
       const name = el('span', 'h-name', tr.name); name.title = 'Двойной клик — переименовать';
       name.ondblclick = (e) => { e.stopPropagation(); renameInline(name, tr.name, (v) => { tr.name = v; renderPlaylist(); renderBrowser(); syncRecPane(); }); };
       const more = el('button', 'h-more'); more.appendChild(ico('dots')); more.title = 'Настройки трека'; more.setAttribute('aria-label', 'Настройки трека ' + tr.name);
@@ -3683,6 +3801,7 @@ function voxWorkletModule() {
       const mc = el('canvas', 'h-meter'); mc.width = 160; mc.height = 2; trackMeters.push({ c: mc, i: tr.insert });
       h.append(top, mid, bot, mc);
       h.onclick = (e) => {
+        if (trackDragged) { trackDragged = false; return; }
         if (Vox.isMobile() && e.target.closest('.h-top')) { openTrackSheet(ti); return; }
         selectTrack(ti);
       };
@@ -3722,6 +3841,42 @@ function voxWorkletModule() {
       blk.style.width = Vox.songBeats() * ppb + 'px'; pl.appendChild(blk);
     }
     lanes.appendChild(pl);
+  }
+
+  // Порядок треков: тянуть за иконку трека (мышь или палец), или ↑ / ↓ в меню ⋯
+  let trackDragged = false;
+  function moveTrack(from, to) {
+    to = clamp(to, 0, st.tracks.length - 1);
+    if (from === to || !st.tracks[from]) return;
+    const sel = st.tracks[st.selectedTrack];
+    const [t] = st.tracks.splice(from, 1); st.tracks.splice(to, 0, t);
+    st.selectedTrack = Math.max(0, st.tracks.indexOf(sel));
+    Vox.emit('tracks'); Vox.history.schedule();
+  }
+  function dragTrack(handle, head, ti) {
+    handle.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0 && e.pointerType === 'mouse') return;
+      e.stopPropagation(); e.preventDefault(); handle.setPointerCapture(e.pointerId);
+      const y0 = e.clientY, list = [...heads.querySelectorAll('.head[data-track]')];
+      const rects = list.map((x) => x.getBoundingClientRect());
+      let to = ti, moved = false;
+      const mv = (ev) => {
+        const dy = ev.clientY - y0;
+        if (!moved && Math.abs(dy) < 5) return;
+        if (!moved) { moved = true; head.classList.add('dragging'); }
+        head.style.transform = 'translateY(' + dy + 'px)';
+        const y = rects[ti].top + rects[ti].height / 2 + dy;
+        to = rects.filter((r, n) => n !== ti && r.top + r.height / 2 < y).length; // сколько треков окажется выше
+        list.forEach((x, n) => { x.classList.toggle('drop-before', n === to && to < ti); x.classList.toggle('drop-after', n === to && to > ti); });
+      };
+      const up = () => {
+        handle.removeEventListener('pointermove', mv); handle.removeEventListener('pointerup', up); handle.removeEventListener('pointercancel', up);
+        list.forEach((x) => x.classList.remove('drop-before', 'drop-after'));
+        head.classList.remove('dragging'); head.style.transform = '';
+        if (moved) { trackDragged = true; setTimeout(() => (trackDragged = false), 0); moveTrack(ti, to); if (to !== ti) Vox.hint('Трек «' + st.tracks[to].name + '» перемещён на позицию ' + (to + 1)); }
+      };
+      handle.addEventListener('pointermove', mv); handle.addEventListener('pointerup', up); handle.addEventListener('pointercancel', up);
+    });
   }
 
   function renameInline(node, value, done) {
@@ -3854,30 +4009,40 @@ function voxWorkletModule() {
     }
   }
 
-  // линейка: клик — курсор; протяжка — новый цикл; края и тело цикла тянутся (шаг — доля, с Shift — такт)
+  // Линейка: клик или протяжка — курсор (скраб, во время игры — пауза и продолжение с нового места).
+  // Цикл видно и можно тянуть, только когда он включён (⟳ / L); Shift+протяжка — нарисовать новый цикл;
+  // двойной клик по линейке или полосе цикла — сбросить цикл.
   function renderLoop() {
     const L = st.loop;
-    loopEl.hidden = false;
+    loopEl.hidden = !L.on;
     loopEl.classList.toggle('on', L.on);
     loopEl.style.left = L.start * ppb + 'px'; loopEl.style.width = (L.end - L.start) * ppb + 'px';
-    loopEl.title = 'Цикл ' + (L.on ? '(вкл)' : '(выкл)') + ': доли ' + (L.start + 1) + '–' + L.end + '. Тяни края или середину; L — вкл/выкл';
+    loopEl.title = 'Цикл: доли ' + (L.start + 1) + '–' + L.end + '. Тяни края или середину; двойной клик — сбросить; L — вкл/выкл';
     $('playlist').classList.toggle('looping', L.on);
   }
   if (!loopEl.querySelector('.lh')) loopEl.append(el('i', 'lh l'), el('i', 'lh r'));
   const beatAt = (clientX) => (clientX - ruler.getBoundingClientRect().left) / ppb;
+  let scrubbing = false;
   ruler.addEventListener('pointerdown', (e) => {
-    if (e.button === 2) return;
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
     e.preventDefault(); ruler.setPointerCapture(e.pointerId);
     const L = st.loop, b0 = beatAt(e.clientX), x0 = e.clientX;
-    const part = e.target.closest('.lh') ? (e.target.classList.contains('l') ? 'l' : 'r') : e.target.closest('.loop-region') && L.on ? 'body' : null;
+    const onLoop = L.on && e.target.closest('.loop-region');
+    const mode = onLoop ? (e.target.closest('.lh') ? (e.target.classList.contains('l') ? 'l' : 'r') : 'body') : e.shiftKey ? 'new' : 'scrub';
     const s0 = L.start, e0 = L.end;
-    let mode = part, moved = false;
-    const snapB = (b, ev) => { const q = ev.shiftKey ? 4 : 1; return Math.round(b / q) * q; };
+    let moved = false, wasPlaying = false;
+    const snapB = (b, ev) => { const q = ev.shiftKey && mode !== 'new' ? 4 : 1; return Math.round(b / q) * q; };
+    const scrubTo = (b) => { st.posBeats = Math.max(0, b); };
+    if (mode === 'scrub') {
+      wasPlaying = st.playing && !st.recording;
+      if (st.playing && !st.recording) { Vox.stop(); }
+      if (!st.recording) { scrubbing = true; scrubTo(b0); ruler.classList.add('scrub'); }
+    }
     const mv = (ev) => {
-      if (Math.abs(ev.clientX - x0) > 5) moved = true;
-      if (!moved) return;
+      if (Math.abs(ev.clientX - x0) > 4) moved = true;
       const b = beatAt(ev.clientX);
-      if (!mode) mode = 'new';
+      if (mode === 'scrub') { if (scrubbing) scrubTo(b); return; }
+      if (!moved) return;
       if (mode === 'l') L.start = clamp(snapB(b, ev), 0, e0 - 1);
       else if (mode === 'r') L.end = Math.max(s0 + 1, snapB(b, ev));
       else if (mode === 'body') { const d = snapB(b - b0, ev); L.start = Math.max(0, s0 + d); L.end = L.start + (e0 - s0); }
@@ -3886,9 +4051,19 @@ function voxWorkletModule() {
     };
     const up = () => {
       ruler.removeEventListener('pointermove', mv); ruler.removeEventListener('pointerup', up); ruler.removeEventListener('pointercancel', up);
-      if (moved) { Vox.setLoop({}); Vox.history.schedule(); } else Vox.setPosition(Math.max(0, Math.round(b0)));
+      ruler.classList.remove('scrub');
+      if (mode === 'scrub') {
+        if (!scrubbing) return;
+        scrubbing = false;
+        if (wasPlaying) Vox.play(); else Vox.emit('transport');
+      } else if (moved) { Vox.setLoop({}); Vox.history.schedule(); }
     };
     ruler.addEventListener('pointermove', mv); ruler.addEventListener('pointerup', up); ruler.addEventListener('pointercancel', up);
+  });
+  ruler.addEventListener('dblclick', () => {
+    if (!st.loop.on) return;
+    Vox.setLoop({ on: false }); Vox.history.schedule();
+    Vox.hint('Цикл сброшен. Включить снова — кнопка ⟳ или L');
   });
 
   $('zoomIn').onclick = () => { ppb = Math.min(96, ppb * 1.25); renderPlaylist(); };
@@ -3973,7 +4148,14 @@ function voxWorkletModule() {
       del.disabled = st.tracks.length < 2;
       del.onclick = () => { closeSheet(); deleteTrack(ti); };
       acts.append(fx, dup, del);
-      sh.append(ctl, acts);
+      const order = el('div', 'sheet-acts');
+      const upB = el('button', 'sheet-btn', '↑ Выше'), dnB = el('button', 'sheet-btn', '↓ Ниже');
+      upB.title = 'Переместить трек вверх'; dnB.title = 'Переместить трек вниз';
+      upB.disabled = ti === 0; dnB.disabled = ti === st.tracks.length - 1;
+      upB.onclick = () => { moveTrack(ti, ti - 1); openTrackSheet(ti - 1); };
+      dnB.onclick = () => { moveTrack(ti, ti + 1); openTrackSheet(ti + 1); };
+      order.append(upB, dnB);
+      sh.append(ctl, order, acts);
       return fx;
     });
   }
@@ -4094,7 +4276,11 @@ function voxWorkletModule() {
       targets.forEach((j) => {
         const row = el('div', 'send-row' + (st.mixer[j].ret ? ' ret' : ''));
         const can = Vox.isRouted(i, j) || Vox.canRoute(i, j);
-        const lab = el('span', 'sr-name', st.mixer[j].name); lab.title = insertLabel(j);
+        const lab = el('button', 'sr-name'); lab.append(el('span', '', st.mixer[j].name), ico('gear', 'sr-gear'));
+        const fk = st.mixer[j].fx.findIndex((x) => x);
+        lab.title = fk >= 0 ? 'Настроить ' + Vox.FX[st.mixer[j].fx[fk].type].title + ' на канале ' + insertLabel(j) : 'На канале ' + insertLabel(j) + ' нет эффектов';
+        lab.setAttribute('aria-label', lab.title);
+        lab.onclick = () => { const k2 = st.mixer[j].fx.findIndex((x) => x); if (k2 >= 0) openPlugin(j, k2); else { st.selectedInsert = j; renderFxPane(); } };
         const v = (ch.sends && ch.sends[j]) || 0, out = el('output', 'sr-db', sendText(v));
         const sl = hslider({ min: 0, max: 1, value: v, def: Vox.UNITY_SEND, cls: 'send', label: 'Посыл в ' + st.mixer[j].name,
           onInput: (x) => { const keep = !st.mixer[j].ret; Vox.setSend(i, j, keep ? Math.max(x, 0.0005) : x); out.textContent = sendText(x); } });
@@ -4260,7 +4446,8 @@ function voxWorkletModule() {
   const sec = (v) => v.toFixed(v < 10 ? 1 : 0) + ' с';
   const GENERIC = {
     delay: [
-      { k: 'sync', type: 'select', label: 'Время', options: [['1/4', '1/4'], ['1/8', '1/8'], ['1/8.', '1/8 с точкой'], ['1/8t', '1/8 триоль'], ['1/16', '1/16'], ['1/4.', '1/4 с точкой'], ['1/2', '1/2']] },
+      { k: 'sync', type: 'select', label: 'Время', options: [['1/4', '1/4'], ['1/8', '1/8'], ['1/8.', '1/8 с точкой'], ['1/8t', '1/8 триоль'], ['1/16', '1/16'], ['1/4.', '1/4 с точкой'], ['1/2', '1/2'], ['ms', 'В мс (свободно)']] },
+      { k: 'ms', label: 'Время, мс', min: 20, max: 2000, log: true, fmt: (v) => Math.round(v) + ' мс', def: 250 },
       { k: 'pingpong', type: 'select', num: true, label: 'Режим', options: [[0, 'Обычный'], [1, 'Пинг-понг']] },
       { k: 'feedback', label: 'Feedback', min: 0, max: 0.92, fmt: pct, def: 0.32 },
       { k: 'tone', label: 'High Cut', min: 1000, max: 16000, log: true, fmt: hz, def: 5500 },
@@ -4561,6 +4748,30 @@ function voxWorkletModule() {
     row1.appendChild(field('Тип голоса', selectOf('atRange' + i + k, Object.entries(R).map(([kk, r]) => [kk, r.label]), p.range || 'mid',
       (v) => { Vox.setFxParams(i, k, { range: v }); syncLat(); })));
     wrap.appendChild(row1);
+    // опорная частота A4: 415.3…466.2 Гц (±100 центов от 440), шаг 0.1, кнопки 432 / 440
+    const refRow = el('div', 'plug-row at-ref');
+    const REF_MIN = 415.3, REF_MAX = 466.2;
+    const refNum = el('input'); refNum.type = 'number'; refNum.min = REF_MIN; refNum.max = REF_MAX; refNum.step = 0.1; refNum.id = 'atRef' + i + k;
+    refNum.setAttribute('aria-label', 'Опорная частота, Гц');
+    const centsEl = el('span', 'at-cents');
+    const refSeg = el('div', 'seg');
+    const refSl = hslider({ min: REF_MIN, max: REF_MAX, step: 0.1, value: p.ref || 440, def: 440, label: 'Опорная частота', onInput: (v) => setRef(v) });
+    function setRef(v, from) {
+      v = Math.round(clamp(+v || 440, REF_MIN, REF_MAX) * 10) / 10;
+      Vox.setFxParams(i, k, { ref: v });
+      if (from !== 'num') refNum.value = v.toFixed(1);
+      refSl.sync(v);
+      const c = Math.round(1200 * Math.log2(v / 440));
+      centsEl.textContent = c === 0 ? 'стандарт' : (c > 0 ? '+' : '') + c + ' центов';
+      refSeg.querySelectorAll('button').forEach((b) => b.classList.toggle('on', Math.abs(+b.dataset.f - v) < 0.05));
+    }
+    [432, 440].forEach((f) => { const b = el('button', '', f + ' Гц'); b.dataset.f = f; b.onclick = () => setRef(f); refSeg.appendChild(b); });
+    refNum.addEventListener('change', () => setRef(refNum.value));
+    const refBox = el('div', 'at-ref-box'); refBox.append(refSl, refNum, el('span', 'at-unit', 'Гц'), centsEl);
+    refRow.append(field('Опорная частота (A4)', refBox), field('Быстро', refSeg));
+    refRow.title = 'Подстройка под бит со сдвигом высоты: f(ноты) = A4 · 2^((n − 69) / 12)';
+    wrap.appendChild(refRow);
+    setRef(p.ref || 440);
 
     const custom = (name) => (v) => { Vox.setFxParams(i, k, { [name]: v, preset: 'custom' }); syncSeg(); };
     const row2 = el('div', 'plug-row at-knobs');

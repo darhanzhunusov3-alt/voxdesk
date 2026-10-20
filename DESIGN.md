@@ -98,16 +98,19 @@
 
 - верхняя панель: `.tbtn`, `.tbtn.icon`, `.tbtn.play.playing` (идёт воспроизведение), `.tbtn.rec.active` (идёт запись), `#btnLoop.on`, `.tbtn.on` (метроном, библиотека), `.chip`, `.chip-unit`, `.timer`, `.master`, `.master-col`
 - ползунок: `.hslider` (input range; CSS-переменная `--p` 0..1 = положение), `.hslider.send` (посыл), `.hslider.center` (панорама)
-- заголовок трека: `.head`, `.head.selected`, `.head.muted` (цвет трека — переменная `--c`), `.h-top`, `.h-num`, `.h-ico`, `.h-name`, `.h-more`, `.rename` (поле переименования),
+- заголовок трека: `.head`, `.head.selected`, `.head.muted` (цвет трека — переменная `--c`), `.h-top`, `.h-num`, `.h-ico`, `.h-grip` (иконка = ручка переноса трека),
+  `.head.dragging` (трек тянут), `.head.drop-before` / `.head.drop-after` (куда встанет), `.h-name`, `.h-more`, `.rename` (поле переименования),
   `.h-mid`, `.fx-badge`, `.fx-badge.on`, `.h-btns`, `.h-bot`, `.h-meter` (canvas уровня), `.pan-knob`
 - строка бита: `.head.pattern-head`, `.pattern-lane`, `.pattern-block`
 - таймлайн: `.lane`, `.lane.drop`, `.lane-empty`, `.clip`, `.clip.selected`, `.c-name`, `.trim.l`, `.trim.r`, `.fade.fi`, `.fade.fo`,
-  линейка `.ruler span.bar` / `span.tick`, цикл `.loop-region`, `.loop-region.on`, ручки краёв `.lh.l`, `.lh.r`; `#playlist.looping`
+  линейка `.ruler span.bar` / `span.tick`, `.ruler.scrub` (идёт перетаскивание курсора), цикл `.loop-region` (скрыт атрибутом hidden, когда цикл выключен),
+  `.loop-region.on`, ручки краёв `.lh.l`, `.lh.r`; `#playlist.looping`
 - кнопки-квадраты: `.sq`, `.sq.on`, `.sq.solo`, `.sq.arm` (точка — `<i>`); светодиоды `.led`, `.led.off`
 - нижняя панель: `.drawer.collapsed`, `.dr-head`, `.dr-tabs`, `.dr-tab`, `.dr-tab.on`, `.dr-ch`, `.dr-ch-label`, `.dr-body`, `.dr-pane`
 - эффекты трека: `.fxp-ch`, `.fxp-name`, `.fxp-sub`, `.fxp-row`, `.fxp-db`, `.fxp-meter`, `.fxp-chain`, `.fxp-title`, `.fxp-hint`, `.fxp-note`,
   карточки `.fx-cards`, `.fx-card`, `.fx-card.bypass`, `.fx-card.add` (цвет полоски — `--fxc`), `.fx-pow`, `.fx-pow.on`, `.fx-open`, `.fx-num`, `.fx-name`, `.fx-sub`, `.fx-rm`
-- посылы и маршрут: `.fxp-sends`, `.route-row`, `.route-row.on`, `.rr-led`, `.send-row`, `.send-row.ret`, `.sr-name`, `.sr-db`, `.sr-rm`, `.send-add`
+- посылы и маршрут: `.fxp-sends`, `.route-row`, `.route-row.on`, `.rr-led`, `.send-row`, `.send-row.ret`, `.sr-name` (кнопка: имя + `.sr-gear`, открывает эффект канала), `.sr-db`, `.sr-rm`, `.send-add`
+- тост: `.toast`, `.toast.show` (короткое уведомление снизу по центру, например об автокее)
 - запись: `.rec-pane`, `.rec-main`, `.rec-big`, `.rec-big.active`, `.rec-info`, `.rec-field`, `.rec-settings`
 - Channel Rack: `.rack`, `.rack-row`, `.r-name`, `.steps`, `.step`, `.step.b`, `.step.on`, `.step.now`
 - Channel Rack на телефоне: `.m-rack`, `.m-rack-row`, `.m-rack-row.muted`, `.m-rack-head`, `.m-led`, `.r-title`, `.r-meta`, `.m-steps`
@@ -117,7 +120,7 @@
   `.sheet-ctl`, `.sheet-row`, `.sheet-val`, `.sheet-name`, `.swatches`, `.swatch`, `.swatch.on`
 - окна плагинов (модальные): `.windows-layer.open`, `.win` (атрибут `data-win` = `plug-<канал>-<слот>`), `.win-title`, `.w-name`, `.w-sub`, `.w-close`, `.win-body`
 - плагины: `.plug`, `.plug-row`, `.plug-sec`, `.ps-title`, `.plug-field`, `.seg`, `.plug-foot`, `.plug-frame-box`, `.plug-frame`
-- автотюн: `.at-display`, `.at-note`, `.at-note.idle`, `.at-bar`, `.at-cap`, `.at-knobs`
+- автотюн: `.at-display`, `.at-note`, `.at-note.idle`, `.at-bar`, `.at-cap`, `.at-knobs`, опорная частота `.at-ref`, `.at-ref-box`, `.at-unit`, `.at-cents`
 - EQ: `.eq-graph`, `.eq-bands`, `.eq-band`, `.eq-band.sel`, `.eq-band.out`, `.eq-band-head` (цвет полосы — переменная `--band`)
 - Soft Clipper: `.clip-top`, `.clip-graph`, `.clip-meter`, `.gr-label`, `.gr-bar`, `.gr-val`
 - ручка: `.knob`, `.knob.small`, `.knob-dial` (CSS-переменная `--p` от 0 до 1 = положение), `.knob-label`, `.knob-val`

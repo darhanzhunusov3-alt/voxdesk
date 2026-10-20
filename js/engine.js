@@ -133,7 +133,7 @@
   };
   Vox.shkaPreviewStop = (i, k) => { const f = Vox.live && Vox.live[i] && Vox.live[i].fx[k]; if (f) f.node.port.postMessage({ previewPlay: false }); };
 
-  const atMsg = (q) => ({ key: +q.key, scale: q.scale, speed: +q.speed, amount: +q.amount, range: q.range || 'mid',
+  const atMsg = (q) => ({ key: +q.key, scale: q.scale, ref: +q.ref || 440, speed: +q.speed, amount: +q.amount, range: q.range || 'mid',
     humanize: +(q.humanize || 0), flex: +(q.flex || 0), tracking: q.tracking == null ? 50 : +q.tracking, transpose: +(q.transpose || 0) });
   FX.autotune = {
     title: 'Автотюн',
@@ -143,7 +143,7 @@
       medium: { label: 'Средний', speed: 20, amount: 1, humanize: 20, flex: 10 },
       hard:   { label: 'Жёсткий', speed: 0,  amount: 1, humanize: 0,  flex: 0 }
     },
-    defaults: () => ({ preset: 'medium', key: 9, scale: 'minor', speed: 20, amount: 1, humanize: 20, flex: 10, tracking: 50, transpose: 0, range: 'mid' }),
+    defaults: () => ({ preset: 'medium', key: 9, scale: 'minor', ref: 440, speed: 20, amount: 1, humanize: 20, flex: 10, tracking: 50, transpose: 0, range: 'mid' }),
     ranges: { high: { label: 'Сопрано', fmin: 150 }, mid: { label: 'Альт / Тенор', fmin: 100 }, low: { label: 'Низкий мужской', fmin: 75 } },
     latency(p, sr) { const f = (FX.autotune.ranges[p.range] || FX.autotune.ranges.mid).fmin; return (2 * Math.floor(sr / f) + 64) / sr; },
     create(ctx, p, info) {
@@ -273,7 +273,7 @@
   /* --- Delay: эхо в темп, пинг-понг, мягкое насыщение повторов --- */
   FX.delay = {
     title: 'Delay',
-    defaults: () => ({ sync: '1/8', feedback: 0.32, dry: 1, wet: 0.25, tone: 5500, lowcut: 300, pingpong: 0, sat: 0.2 }),
+    defaults: () => ({ sync: '1/8', ms: 250, feedback: 0.32, dry: 1, wet: 0.25, tone: 5500, lowcut: 300, pingpong: 0, sat: 0.2 }),
     create(ctx, p) {
       const input = stereoIn(ctx), out = ctx.createGain(), dry = ctx.createGain(), wet = ctx.createGain();
       const merge = ctx.createChannelMerger(2);
@@ -296,7 +296,9 @@
       const fx = { input, output: out, isDelay: true, params: p,
         apply(q) {
           fx.params = q;
-          const t = ctx.currentTime, beat = 60 / Vox.state.bpm, dt = Math.min(3.9, (SYNC[q.sync] || 0.5) * beat);
+          const t = ctx.currentTime, beat = 60 / Vox.state.bpm;
+          // время: по темпу (1/4, 1/8, 1/8., 1/16…) или свободно в миллисекундах (sync = 'ms')
+          const dt = Math.min(3.9, Math.max(0.001, q.sync === 'ms' ? (+q.ms || 250) / 1000 : (SYNC[q.sync] || 0.5) * beat));
           const pp = q.pingpong > 0.5;
           dL.delayTime.setTargetAtTime(dt, t, 0.03);
           dR.delayTime.setTargetAtTime(dt, t, 0.03);
@@ -1100,7 +1102,81 @@
       const id = Vox.addBuffer(buf, file.name.replace(/\.[^.]+$/, ''));
       Vox.addClip(trackIdx, id, startBeat);
       Vox.hint('Добавлено: ' + file.name);
+      // бит (по треку или имени файла) — определяем его тональность и настраиваем автотюны
+      const tr = st.tracks[trackIdx];
+      if ((tr && BEAT_RE.test(tr.name)) || BEAT_RE.test(file.name)) setTimeout(() => Vox.autoKey(buf), 30);
     } catch (e) { Vox.hint('Не удалось открыть ' + file.name + '. Подойдут WAV, MP3, OGG, FLAC.'); }
+  };
+  /* ------------------------------ АВТОКЕЙ ------------------------------
+     Тональность бита: хрома-вектор (12 питч-классов) по первым 30 с и корреляция с профилями
+     Крумхансла–Шмуклера для 24 тональностей. Каждый кадр нормируется, чтобы громкие места не перевешивали. */
+  const BEAT_RE = /бит|beat|минус|инстр|instrumental|prod/i;
+  const KS_MAJ = [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88];
+  const KS_MIN = [6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17];
+  function fftInPlace(re, im) {
+    const n = re.length;
+    for (let i = 1, j = 0; i < n; i++) {
+      let bit = n >> 1; for (; j & bit; bit >>= 1) j ^= bit; j ^= bit;
+      if (i < j) { let t = re[i]; re[i] = re[j]; re[j] = t; t = im[i]; im[i] = im[j]; im[j] = t; }
+    }
+    for (let len = 2; len <= n; len <<= 1) {
+      const a = -2 * Math.PI / len, wr = Math.cos(a), wi = Math.sin(a), h = len >> 1;
+      for (let i = 0; i < n; i += len) {
+        let cr = 1, ci = 0;
+        for (let k = 0; k < h; k++) {
+          const p = i + k, q = p + h, tr = re[q] * cr - im[q] * ci, ti = re[q] * ci + im[q] * cr;
+          re[q] = re[p] - tr; im[q] = im[p] - ti; re[p] += tr; im[p] += ti;
+          const nr = cr * wr - ci * wi; ci = cr * wi + ci * wr; cr = nr;
+        }
+      }
+    }
+  }
+  function corr(a, b) {
+    const ma = a.reduce((x, y) => x + y) / 12, mb = b.reduce((x, y) => x + y) / 12;
+    let n = 0, da = 0, db = 0;
+    for (let i = 0; i < 12; i++) { n += (a[i] - ma) * (b[i] - mb); da += (a[i] - ma) ** 2; db += (b[i] - mb) ** 2; }
+    return da && db ? n / Math.sqrt(da * db) : 0;
+  }
+  // → { root (0..11, C = 0), scale ('major' | 'minor'), score, margin } или null (тишина / нет тонального материала)
+  Vox.detectKey = (buffer, maxSec) => {
+    const sr = buffer.sampleRate, len = Math.min(buffer.length, Math.floor(sr * (maxSec || 30)));
+    const N = sr > 60000 ? 32768 : 16384, hop = N >> 1;
+    if (len < N) return null;
+    const chs = []; for (let c = 0; c < buffer.numberOfChannels; c++) chs.push(buffer.getChannelData(c));
+    const win = new Float32Array(N); for (let i = 0; i < N; i++) win[i] = 0.5 - 0.5 * Math.cos(2 * Math.PI * i / N);
+    // карта бинов → питч-класс: только бины близко к ноте (±0.35 полутона), 60 Гц…5 кГц
+    const pcOf = new Int8Array(N / 2).fill(-1);
+    for (let k = 1; k < N / 2; k++) {
+      const f = k * sr / N; if (f < 60 || f > 5000) continue;
+      const m = 69 + 12 * Math.log2(f / 440), r = Math.round(m);
+      if (Math.abs(m - r) < 0.35) pcOf[k] = ((r % 12) + 12) % 12;
+    }
+    const chroma = new Float64Array(12), re = new Float64Array(N), im = new Float64Array(N), fc = new Float64Array(12);
+    for (let s0 = 0; s0 + N <= len; s0 += hop) {
+      let e = 0;
+      for (let i = 0; i < N; i++) { let v = 0; for (const d of chs) v += d[s0 + i]; v /= chs.length; re[i] = v * win[i]; im[i] = 0; e += v * v; }
+      if (e / N < 1e-7) continue; // тишина
+      fftInPlace(re, im); fc.fill(0);
+      for (let k = 1; k < N / 2; k++) { const pc = pcOf[k]; if (pc >= 0) fc[pc] += Math.sqrt(re[k] * re[k] + im[k] * im[k]); }
+      const mx = Math.max(...fc); if (mx > 0) for (let i = 0; i < 12; i++) chroma[i] += fc[i] / mx;
+    }
+    if (Math.max(...chroma) <= 0) return null;
+    const res = [];
+    for (let r = 0; r < 12; r++) {
+      const rot = (prof) => prof.map((_, i) => prof[((i - r) % 12 + 12) % 12]);
+      res.push({ root: r, scale: 'major', score: corr(chroma, rot(KS_MAJ)) }, { root: r, scale: 'minor', score: corr(chroma, rot(KS_MIN)) });
+    }
+    res.sort((x, y) => y.score - x.score);
+    return { root: res[0].root, scale: res[0].scale, score: res[0].score, margin: res[0].score - res[1].score, chroma: Array.from(chroma) };
+  };
+  Vox.autoKey = (buffer) => {
+    const k = Vox.detectKey(buffer);
+    if (!k || k.score < 0.5) { Vox.hint('Тональность бита определить не удалось — выбери KEY вручную'); return null; }
+    Vox.setProjectKey(k.root, k.scale);
+    const name = NOTE_NAMES[k.root] + ' ' + (k.scale === 'minor' ? 'min' : 'maj');
+    Vox.emit('toast', 'Определена тональность бита: ' + name + ' — автотюн настроен');
+    Vox.hint('Тональность бита: ' + name + ' (уверенность ' + Math.round(k.score * 100) + ' %). Поменять — KEY в шапке');
+    return k;
   };
   const clone = (o) => JSON.parse(JSON.stringify(o));
   Vox.findClip = (clipId) => {
