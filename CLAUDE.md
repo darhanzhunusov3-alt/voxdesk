@@ -1,4 +1,7 @@
-# VoxDesk — техническая сводка для Claude Code
+# WOK Studio — техническая сводка для Claude Code
+
+(До 2026-10-20 проект назывался VoxDesk: внутренние имена — глобальный `window.Vox`, IndexedDB `voxdesk`,
+папка — остались, чтобы не потерять автосохранения и не ломать код; старые файлы `.voxdesk.zip` открываются.)
 
 Браузерная DAW в духе FL Studio для записи и сведения вокала. Автор — пользователь (битмейкер/вокалист,
 пишет в FL Studio, свои VST: **VocalChain** и **ShkaFX**). Цель: своя студия в браузере с его плагинами,
@@ -13,7 +16,7 @@
 - **Без сборщика и фреймворков:** чистый JS (ES2020), HTML, CSS. Все модули — IIFE, общий глобальный объект `window.Vox`.
 - Порядок подключения в `index.html` важен:
   `vc-bundle.js` → `shka-bundle.js` → `shka-worker.js` → `worklets.js` → `engine.js` → `project.js` → `ui.js`.
-- **Сборка одного файла:** `python3 build.py` → `dist/voxdesk.html` (всё встроено) и `dist/voxdesk-artifact.html`
+- **Сборка одного файла:** `python3 build.py` → `dist/wok-studio.html` (всё встроено) и `dist/wok-studio-artifact.html`
   (фрагмент без `<html>/<head>/<body>` для публикации как артефакт Claude). В `build.py` внутри встроенных скриптов
   экранируются `</script` и `<!--` — строки с интерфейсами плагинов их содержат.
 - **Запуск:** `python -m http.server 8000` в корне → `http://localhost:8000` (микрофон работает только на https/localhost).
@@ -31,7 +34,7 @@ js/worklets.js        функция voxWorkletModule(): все AudioWorklet-п�
                         vox-autotune, vox-deesser, vox-recorder, vox-vocalchain, vox-shkafx
 js/engine.js          звуковой движок: состояние Vox.state, эффекты Vox.FX, микшер, посылы, транспорт,
                         запись, клипы, PDC, экспорт, загрузка wasm плагинов, хосты ShkaFX
-js/project.js         отмена/повтор, сохранение/открытие .voxdesk.zip (свой zip-писатель/читатель), автосохранение IndexedDB
+js/project.js         отмена/повтор, сохранение/открытие .wok.zip (свой zip-писатель/читатель), автосохранение IndexedDB
 js/ui.js              весь интерфейс: окна, плейлист, Channel Rack, микшер, окна плагинов, мосты к iframe плагинов, вкладки телефона
 js/shka-worker.js     функция voxShkaWorker(): фоновая часть ShkaFX (Web Worker из Blob URL)
 js/vc-bundle.js       ГЕНЕРИРУЕТСЯ plugins/vocalchain/pack.py: window.VC = {data, ui, wasmGz}
@@ -52,13 +55,14 @@ build.py              сборка dist/
   tracks: [{ name, color(1..6), insert, armed, mute,
              clips: [{ id, bufferId, startBeat, offset(s), dur(s), name, fadeIn(s), fadeOut(s) }] }],
   mixer:  [{ name, vol(0..1, 0.8 = 0 dB), pan, mute, solo, ret(bool — канал-возврат),
-             sends: { [busIndex]: 0..1 }, fx: [8 слотов: null | { type, bypass, params }] }],   // mixer[0] — Master
+             toMaster(bool, нет поля = true), sends: { [любой канал ≠ 0, ≠ свой]: 0..1 },
+             fx: [8 слотов: null | { type, bypass, params }] }],   // mixer[0] — Master
   rack:   { channels: [{ name, type(kick|clap|hat|ohat|b808), insert, vol, mute, steps[16] }] } }
 ```
 - Аудиоданные: `Vox.buffers: Map<id, {buffer: AudioBuffer, name, uid}>` — неизменяемые, клипы ссылаются по `bufferId`.
 - События: `Vox.on(ev, fn)` / `Vox.emit(ev)`; основные: `tracks`, `mixer`, `buffers`, `transport`, `project`, `history`,
   `hint`, `autotune-report`, `vc-meters`, `restore-available`.
-- Проект по умолчанию: дорожки «Вокал Мейн/Даблы/Бэки/Адлибы/Бит»; инсерты 1–10, 11 «Send Reverb», 12 «Send Delay» (ret);
+- Проект по умолчанию: имя «WOK Studio», **паттерн Rack пустой** (все `steps` = 0 — Play без шагов ничего не играет); дорожки «Вокал Мейн/Даблы/Бэки/Адлибы/Бит»; инсерты 1–10, 11 «Send Reverb», 12 «Send Delay» (ret);
   на мастере Soft Clipper; на вокальных каналах автотюн + VocalChain (типы Мейн/Даблы/Бэки).
 
 ### 3.2 Эффекты (`Vox.FX[type]`)
@@ -68,7 +72,7 @@ build.py              сборка dist/
 
 | type | Реализация |
 |---|---|
-| `autotune` | AudioWorklet `vox-autotune`: YIN (на децимированном ×2 сигнале + уточнение на полной частоте) + TD-PSOLA с историей измерений во времени, нормировка суммы окон. Ручки как Antares: Retune Speed, Humanize, Flex-Tune, Amount, Tracking, Transpose, тип голоса (fmin 75/100/150 Гц). Задержка `2·Tmax+64` сэмплов (≈13–27 мс), компенсируется. Защита от октавных ошибок (подтверждение начала ноты 3 измерения, скачок октавы ≥8 измерений, проверка соседней октавы). Пресет «Жёсткий» = Auto-Tune Pro Classic (Retune 0) — совпадение нот с Antares на тесте ≈98 %. |
+| `autotune` | AudioWorklet `vox-autotune`: YIN (на децимированном ×2 сигнале + уточнение на полной частоте) + TD-PSOLA с историей измерений во времени, нормировка суммы окон. Против щелчков (2026-10-20): метки периодов выравниваются нормированной корреляцией с прошлой меткой (±T/4, грубый+точный поиск — дёшево), период — медиана из 3, коэффициент сдвига на паузах/согласных плавно (~30 мс) уходит к транспозиции вместо обрыва, минимальное сглаживание 1 мс даже при Retune 0, кусок удлиняется только при понижении > ~9 полутонов (длиннее — гребёнка, проверено), DC-фильтр 10 Гц на выходе. Ручки как Antares: Retune Speed, Humanize, Flex-Tune, Amount, Tracking, Transpose, тип голоса (fmin 75/100/150 Гц). Задержка `2·Tmax+64` сэмплов (≈13–27 мс), компенсируется. Защита от октавных ошибок (подтверждение начала ноты 3 измерения, скачок октавы ≥8 измерений, проверка соседней октавы). Пресет «Жёсткий» = Auto-Tune Pro Classic (Retune 0) — совпадение нот с Antares на тесте ≈98 % (измерено ДО правок 2026-10-20; после — проверено только синтетическим стендом, см. §6). |
 | `vocalchain` | AudioWorklet `vox-vocalchain`, wasm из исходников VocalChain 1.2 (NS1 на RNNoise, EQ, DeEsser, SSL, RComp, FET-76, Fresh Air, RVox, Chorus/PanMan/Delay/LowPass/Carousel). params `{type, variant, values[293]}`. Задержка 30 мс (шумодав). Окно — родной UI в iframe. |
 | `shkafx` | См. 3.5. params `{uid, values[47], data(base64 serialise SwellEngine)}`. |
 | `eq` | 7 полос BiquadFilter (hp/ls/pk×3/hs/lp, срезы 12/24 дБ/окт), график через `getFrequencyResponse` на «пробных» фильтрах OfflineAudioContext. |
@@ -78,8 +82,20 @@ build.py              сборка dist/
 | `clipper` | WaveShaper `oversample='4x'` (мягкое колено, tanh) + страховочный жёсткий клип ровно по ceiling. Анализаторы до/после — индикатор «срезано». |
 
 ### 3.3 Микшер и маршрутизация
-`buildChannel`: `input → [fx…] → fader(Gain) → pan(StereoPanner) → master.input` (+ анализаторы L/R для индикаторов в live).
-Посылы — post-fader: `pan → Gain(send) → ret.input` (только в каналы `ret`). Solo не глушит каналы-возвраты.
+`buildChannel`: `input → [fx…] → fader(Gain) → pan(StereoPanner)` (+ анализаторы L/R для индикаторов в live); выходы подключает `connectRoutes`.
+**Маршрутизация как в FL Studio (2026-10-20):** у каждого канала (кроме мастера) рёбра «в мастер» (`toMaster !== false`, усиление 1) и посылы
+`sends[j]` в любой другой канал (post-fader, `pan → [DelayNode] → Gain(send) → chans[j].input`, закон `sendGain = v²·1.6`, 100 % на ручке маршрута = `Vox.UNITY_SEND` = 0 дБ).
+- `routePlan(sr)` (кэш по ключу fxKey+маршрутов): `R(i) = lat(i) + max R(j)` по рёбрам (`R(мастер-вход) = 0`), петли отбрасываются DFS;
+  на ребро i→j ставится задержка `R(i) − lat(i) − R(j)` → по всем путям сигнал приходит в мастер одновременно (нет гребёнки «прямо + через шину»).
+- `Vox.pathLatency(i)` = `R(i)` — на столько раньше стартуют клипы дорожки и шаги паттерна (`playStep(t − R)`); `Vox.maxPdc()` учитывает и каналы паттерна;
+  окно упреждения планировщика = 150 мс + `Vox.curPdc`.
+- `down(i) = R(i) − lat(i)` добавляется к `ahead` эффектов канала (позиция песни для VocalChain/ShkaFX); при смене маршрутов `connectRoutes` сдвигает `f.ahead` и рассылает транспорт.
+- `connectRoutes` инкрементальный: существующие рёбра только меняют усиление (`setTargetAtTime`, 8 мс), пересоздаётся ребро лишь при появлении/исчезновении задержки.
+  Фейдер/панорама/mute тоже через `setTargetAtTime` (в офлайн-рендере — `.value`).
+- API: `Vox.canRoute(from, to)` (нет петли), `Vox.setSend(i, j, amt)` (false при петле; 0 удаляет), `Vox.setRoute(i, j, on)` (j = 0 — выход в мастер), `Vox.isRouted(i, j)`.
+- Solo (`audible()`): слышны соло-каналы, всё вверх и вниз по маршрутам от них и каналы-возвраты.
+- UI (`routeBox` в `renderMixer`): выбранный канал = источник; внизу остальных — `.route-btn` (стрелка) и при маршруте `.knob.route-level` (0–100 %);
+  у цели `.strip.routed`, у каналов, приходящих в выбранный, — `.strip.feeds`; кнопка недоступна, если получится петля.
 `Vox.syncMixer()` приводит живой граф к `Vox.state.mixer`, пересобирая только каналы с изменившейся структурой эффектов
 (ключ `fxKey`), остальным вызывает `apply(params)`; у удаляемых узлов вызывается `dispose()` (worklet-процессоры получают
 `{dispose:true}` и возвращают `false`, чтобы не текла память).
@@ -94,8 +110,8 @@ build.py              сборка dist/
   через `processorOptions`, чтобы офлайн-рендер сразу звучал правильно.
 - **Транспорт:** планировщик с упреждением (`setInterval` 25 мс, окно 150 мс) для паттерна/метронома; клипы — `AudioBufferSourceNode.start(when, offset, dur)`,
   fade — автоматизация `GainNode`.
-- **PDC (компенсация задержки):** `Vox.insertLatency(insert)` = сумма `latency()` эффектов; `Vox.maxPdc()` по звучащим дорожкам;
-  `t0 = now + 0.08 + maxPdc`, клип дорожки стартует на `t0 + (cs − songPos) − pdc(дорожки)`. Экспорт: рендер с запасом `pre = maxPdc`,
+- **PDC (компенсация задержки):** `Vox.insertLatency(insert)` = сумма `latency()` эффектов; `Vox.pathLatency(insert)` — по всему маршруту до мастера (см. 3.3);
+  `Vox.maxPdc()` по звучащим дорожкам и каналам паттерна; `t0 = now + 0.08 + maxPdc`, клип дорожки стартует на `t0 + (cs − songPos) − pathLatency(insert)`. Экспорт: рендер с запасом `pre = maxPdc`,
   `Vox.offlineT0 = pre`, затем запас отрезается → микс ровно с 1-го такта.
 - **Позиция песни в worklet:** процессоры, которым нужен темп/позиция (VocalChain, ShkaFX), получают `{transport: {playing, t0, startBeat, bpm, ahead}}`
   и считают `songSec = currentTime − t0 + ahead + startBeat·60/bpm` (`Vox.transportFor(ctx)`, рассылается на play/stop).
@@ -132,9 +148,9 @@ build.py              сборка dist/
 ### 3.7 Проект, отмена, автосохранение (`project.js`)
 - **История:** снимок `{projectName, bpm, patternInSong, tracks (без armed), mixer, rack}` в JSON; проверка изменений
   через 250 мс после `pointerup/change/keyup` и событий `tracks/mixer`; до 120 шагов. `Vox.applySnapshot()` + `Vox.syncMixer()`.
-- **Файл проекта `.voxdesk.zip`:** собственный zip без сжатия (CRC32), `project.json` + `audio/<id> <name>.wav` (32-bit float).
+- **Файл проекта `.wok.zip`** (`meta.app = 'WOK Studio'`; открываются и старые `.voxdesk.zip` с `app: 'VoxDesk'`): собственный zip без сжатия (CRC32), `project.json` + `audio/<id> <name>.wav` (32-bit float).
   Чтение поддерживает stored и deflate (`DecompressionStream('deflate-raw')`).
-- **Автосохранение:** IndexedDB `voxdesk` (`kv`: состояние, `buffers`: каналы по `uid`), раз в 2.5 с после изменения;
+- **Автосохранение:** IndexedDB `voxdesk` (имя оставлено после переименования, чтобы не потерять сохранённое) (`kv`: состояние, `buffers`: каналы по `uid`), раз в 2.5 с после изменения;
   при запуске — полоса «Найден прошлый проект… Восстановить».
 
 ## 4. Дизайн-система
@@ -142,28 +158,37 @@ build.py              сборка dist/
 - **Объём (не плоский дизайн — требование пользователя):** `--grad-raised / --grad-raised-hover / --grad-pressed`, `--shadow-raised / --shadow-pressed / --shadow-inset`,
   `--grad-panel`, `--shadow-panel`, `--shadow-window`, `--grad-title(-active)`, `--grad-topbar`, `--grad-accent`, `--grad-rec`, `--grad-lcd`,
   `--grad-strip(-ret)`, `--knob-cap`, `--shadow-knob`, `--fader-cap`, `--fader-groove`, `--grad-step(-b/-on)`, `--glow-accent/--glow-led`, `--text-emboss`.
-- Акцент `--accent #f5a03a` (оранжевый), LED `--led-on #a6e15c`, каналы-возвраты `--ret #6fb3e8`; шрифты Barlow Semi Condensed (UI) и JetBrains Mono (LCD/цифры).
+- Палитра FL Studio 21/24 (2026-10-20): антрацит `--bg-app #1b1e24`, панели `--bg-panel #232731`; акцент `--accent #ff8800`, LED и индикатор уровня — неоновый лайм `--led-on #a6e15c`,
+  маршруты `--route` (лайм), каналы-возвраты `--ret #6fb3e8`; шаги группами по 4 (серые / красноватые `--grad-step-b`, включённые — `--grad-step-on` + `--step-on-glow`),
+  фейдер — шлифованный металл (`--fader-cap`, `--shadow-fader`); шрифты Barlow Semi Condensed (UI) и JetBrains Mono (LCD/цифры).
 - Переменные, которые читает JS: `--beat-px`, `--meter-*`, `--clip-1..6`, `--accent`, `--text`, `--text-faint`, `--bg-inset`, `--font-mono`, `--eq-*`.
 - **Правка дизайна другими ИИ** — по `DESIGN.md` (список id/классов, на которые опирается код, и готовый промпт). Нельзя переименовывать id/классы и трогать `js/`.
-- **Телефон (`max-width: 820px`):** `--tap: 40px`, нижние вкладки `#mtabs` (playlist / rack / mixer / browser) переключают `#app[data-tab]`;
-  окна Rack и Микшер растягиваются на всю область вкладки, окна плагинов — полноэкранные «листы»; верхняя панель — одна строка с горизонтальной прокруткой.
+- **Телефон (`max-width: 820px`, в духе FL Studio Mobile):** `--tap: 40px`, `--gutter: 8px`, плоский таб-бар `#mtabs` высотой `--mtabs-h` (Плейлист / Рэк / Микшер / Браузер,
+  `data-tab` = playlist / rack / mixer / browser) с полосой-индикатором активной вкладки переключает `#app[data-tab]`;
+  окна Rack и Микшер — во всю ширину экрана (заходят в поля `#app`, кроме safe-area), шторка канала — `--sheet-radius`, громкость — `.hfader` (range), окна плагинов — полноэкранные «листы»; верхняя панель — одна строка с горизонтальной прокруткой.
 - Ручка: `.knob-dial` с CSS-переменной `--p` (0..1), conic-gradient кольцо + колпачок; перетаскивание вертикальное, Shift — точно, двойной клик — сброс.
 
 ## 5. Реализованные фичи (кратко)
 Плейлист (клипы с волной, перенос между дорожками, привязка 1/4 доли, Alt — без привязки, обрезка краёв, fade, разрезать S, удалить, дублировать Ctrl+D,
-зум, импорт drag&drop) · запись с микрофона и мониторинг · Channel Rack (5 синтезированных барабанов, 16 шагов, 1 паттерн) · микшер (фейдеры, панорама,
-M/S, индикаторы, 8 FX-слотов, посылы, «+ Посыл») · 8 эффектов (см. 3.2) · проект (сохранить/открыть/новый, Ctrl+Z/Y, автосохранение) ·
+зум, импорт drag&drop) · запись с микрофона и мониторинг · Channel Rack (5 синтезированных барабанов, 16 шагов, 1 паттерн, по умолчанию пустой) · микшер (фейдеры, панорама,
+M/S, индикаторы, 8 FX-слотов, посылы, «+ Посыл», маршрутизация любого канала в любой как в FL, PDC по графу) · 8 эффектов (см. 3.2) · проект (сохранить/открыть/новый, Ctrl+Z/Y, автосохранение) ·
 экспорт WAV · горячие клавиши (Пробел, R, S, Ctrl+D/Z/Y/S/O, F6/F8/F9, Delete) · подсказки в строке состояния · мобильная раскладка.
 
 ## 6. Как проверялось
 Headless Chromium через Playwright (`--use-fake-device-for-media-stream`, `--autoplay-policy=no-user-gesture-required`): загрузка без ошибок,
 запись, клипы/отмена/сохранение/открытие/восстановление, экспорт (выравнивание PDC 0–2 мс, потолок клиппера −0.3 дБ), посылы (уровень на возврате),
 окна плагинов, ширина 390 px без горизонтальной прокрутки страницы. Автотюн — офлайн в Node (мок `AudioWorkletProcessor`) против записи Antares пользователя.
-Тестовые скрипты в репозиторий не входят — стоит завести `tests/` с Playwright.
+2026-10-20 (переименование, маршруты, дизайн, автотюн): Playwright 390×844 / 360×800 / 1440×900 — 76 проверок, включая пустой паттерн по умолчанию и в «Новом проекте»,
+маршрут 1→10 (100 % = 0 дБ), запрет петли, выключение выхода в мастер, задержки на рёбрах (1→3 и мастер: прямое ребро задержано на lat(3)), Solo вверх по маршруту,
+экспорт с маршрутами, консоль без ошибок. Автотюн — офлайн-стенд в Node: синтетический голос (форманты, джиттер/шиммер, вибрато, октавные прыжки, согласная внутри фразы),
+метрики HNR, точность нот (±20 центов), октавные ошибки, выбросы второй разности; 4 пресета × 44.1/48 кГц, A/B со старой версией и абляция каждого изменения.
+Итог: HNR выхода +0.6…+1.0 дБ во всех 8 случаях, точность та же/лучше, 0 октавных ошибок, скорость как была (×3–7 реального времени на ядро).
+Против записи Antares пользователя после правок НЕ перепроверялось (записи нет в репозитории).
+Тестовые скрипты в репозиторий не входят — стоит завести `tests/` с Playwright и стендом автотюна.
 
 ## 7. Известные ограничения
 - Окно ShkaFX рассчитано на 1180 px; на телефоне масштабируется целиком (≈0.33) и плохо читается — нужна мобильная раскладка в `plugins/shkafx/ui`.
-- Автотюн: на тестовой фразе осталось ~5 коротких октавных ошибок; задержка живого мониторинга с автотюном 13–27 мс + звуковая карта.
+- Автотюн: на тестовой фразе (до правок 2026-10-20) было ~5 коротких октавных ошибок, после правок на живой записи не перемерялось; задержка живого мониторинга с автотюном 13–27 мс + звуковая карта.
 - В предпросмотре артефакта Claude недоступны микрофон и скачивание WAV (только zip/json через capability `downloads`).
 - iOS Safari не тестировался (мобильный Rack проверен только в эмуляции Chromium). Один паттерн в Rack, нет автоматизации, нет MIDI/синтов, нет выбора сэмплов для барабанов.
 - `vc-bundle.js` ~7 МБ (wasm VocalChain с весами RNNoise) — первая загрузка заметна.

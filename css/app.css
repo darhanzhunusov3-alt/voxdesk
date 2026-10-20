@@ -487,6 +487,12 @@ select, input[type="text"], input[type="number"] { background: var(--bg-inset); 
   .win[data-win^="plug-"] .w-close { width: 44px; height: 32px; font-size: 22px; }
   .mixer { flex-direction: column; }
   .strips { padding: 6px; }
+  /* панель плейлиста — одна строка, инструменты прокручиваются вбок */
+  .pl-toolbar { flex-wrap: nowrap; gap: 8px; }
+  .pl-sub { display: none; }
+  .pl-tools { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; min-width: 0; }
+  .pl-tools::-webkit-scrollbar { display: none; }
+  .pl-tools > * { flex: none; }
   .fx-rack { width: auto; border-left: 0; border-top: 1px solid var(--line); }
   .clip .trim { width: 14px; }
   .clip .fade { width: 14px; height: 14px; margin-top: -7px; opacity: 1; }

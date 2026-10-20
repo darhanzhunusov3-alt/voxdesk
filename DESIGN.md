@@ -1,4 +1,4 @@
-# VoxDesk — как менять дизайн (для Gemini и других ИИ)
+# WOK Studio — как менять дизайн (для Gemini и других ИИ)
 
 Этот файл — инструкция для нейросети или дизайнера, который будет менять внешний вид студии.
 Цель: свободно менять дизайн и не сломать звук и логику.
@@ -7,7 +7,7 @@
 
 Можно скопировать как есть:
 
-> Ты меняешь дизайн браузерной DAW «VoxDesk» (папка проекта приложена).
+> Ты меняешь дизайн браузерной DAW «WOK Studio» (папка проекта приложена).
 > Правила в файле DESIGN.md — прочитай его первым.
 > Меняй только `css/theme.css`, `css/app.css` и тексты/порядок элементов в `index.html`.
 > Не переименовывай id и классы из списков в DESIGN.md и не трогай файлы в `js/`.
@@ -52,8 +52,10 @@
 | `--grad-strip`, `--grad-strip-ret` | каналы микшера и каналы-возвраты |
 | `--knob-cap`, `--shadow-knob`, `--knob-ring`, `--knob-track`, `--knob-send` | ручки |
 | `--fader-cap`, `--fader-groove`, `--shadow-fader` | фейдеры микшера |
-| `--grad-step`, `--grad-step-b`, `--grad-step-on` | шаги Channel Rack |
+| `--grad-step`, `--grad-step-b`, `--grad-step-on`, `--step-on-glow` | шаги Channel Rack (группы по 4: серые / красноватые; включённый — оранжевый со свечением) |
 | `--glow-accent`, `--glow-led`, `--text-emboss` | свечение и тиснение текста |
+| `--accent`, `--accent-soft`, `--led-on`, `--route` | оранжевый акцент FL (#ff8800), неоновый лайм индикаторов, цвет активного маршрута |
+| `--gutter`, `--mtabs-h`, `--sheet-radius` | поля страницы, высота нижнего таб-бара, скругление шторки (телефон) |
 
 Хочешь плоский стиль — замени градиенты на однотонные цвета, а тени на `none`.
 
@@ -81,10 +83,12 @@
 - Channel Rack на телефоне: `.m-rack`, `.m-rack-row`, `.m-rack-row.muted`, `.m-rack-head`, `.m-led`, `.r-title`, `.r-meta`, `.m-steps`
   (шаг — прозрачная зона нажатия, видимый квадрат рисуется в `.step::before`)
 - панель канала снизу (bottom sheet): `.sheet-back`, `.sheet`, `.sheet-head`, `.sheet-grip`, `.sheet-title`, `.sheet-sub`,
-  `.sheet-acts`, `.sheet-btn`, `.sheet-btn.primary`, `.sheet-ctl`
+  `.sheet-acts`, `.sheet-btn`, `.sheet-btn.primary`, `.sheet-ctl`, `.sheet-row`, `.sheet-val`, `.hfader` (горизонтальный фейдер, CSS-переменная `--p` 0..1)
 - микшер: `.mixer`, `.strips`, `.strip`, `.strip.master`, `.strip.ret`, `.strip.selected`, `.strip.add-ret`, `.s-num`, `.s-name`,
   `.s-sends`, `.knob.send`, `.s-retlabel`, `.s-addnote`, `.s-btns`, `.s-db`, `.fader-wrap`, `.fader`, `.cap`, `.strip-meter`,
   `.fx-rack`, `.fr-title`, `.fx-slot`, `.open`, `.fx-note`
+- маршрутизация в микшере: `.s-route` (низ канала), `.s-route-src` (подпись у выбранного), `.route-btn`, `.route-btn.on`, `.knob.route-level`,
+  `.strip.routed` (сюда идёт выбранный канал), `.strip.feeds` (этот канал приходит в выбранный)
 - плагины: `.plug`, `.plug-row`, `.plug-sec`, `.ps-title`, `.plug-field`, `.seg`, `.plug-foot`, `.plug-frame-box`, `.plug-frame`
 - автотюн: `.at-display`, `.at-note`, `.at-note.idle`, `.at-bar`, `.at-cap`, `.at-knobs`
 - EQ: `.eq-graph`, `.eq-bands`, `.eq-band`, `.eq-band.sel`, `.eq-band.out`, `.eq-band-head` (цвет полосы — переменная `--band`)
@@ -106,7 +110,8 @@
 ## Телефон
 
 Ниже 820 px студия переходит в мобильный режим (см. `@media (max-width: 820px)` в `app.css` и `theme.css`):
-нижние вкладки, один раздел на экране, окна плагинов на весь экран, крупные кнопки (`--tap`).
+нижний таб-бар в духе FL Studio Mobile (кнопки `#mtabs button` с `<svg>` и `<span>`, активная — `.on`), один раздел на экране,
+Rack и Микшер во всю ширину, окна плагинов на весь экран, крупные кнопки (`--tap`).
 Channel Rack на телефоне — сетка 8×2 без прокрутки вбок; размеры задают `--tap-step` (зона нажатия шага, 44 px),
 `--step-inset` (отступ видимого квадрата) и `--rack-pad-x` (поля по бокам). Условие: `8 × --tap-step + 2 × --rack-pad-x ≤ 360 px`.
 Любые изменения проверяй и на ширине 390 px.

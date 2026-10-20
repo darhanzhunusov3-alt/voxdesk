@@ -1578,6 +1578,7 @@
     $('audioInfo').textContent = c.sampleRate + ' Гц · задержка выхода ≈' + Math.round(lat * 1000) + ' мс';
   });
 
+  $('projName').textContent = st.projectName;
   renderBrowser(); renderPlaylist(); syncTransport();
   requestAnimationFrame(() => {
     OPENERS.rack(); OPENERS.mixer();
