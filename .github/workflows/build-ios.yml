@@ -27,10 +27,18 @@ concurrency:
 
 jobs:
   ios:
-    runs-on: macos-latest
-    timeout-minutes: 45
+    # Intel-машина: у arm64 (macos-latest / macos-14 / macos-15) бывают долгие очереди из-за нехватки мощностей.
+    # macos-13 GitHub закрыл 4.12.2025; macos-15-intel — его замена (поддержка x86_64 — до осени 2027).
+    runs-on: macos-15-intel
+    # время самой сборки (ожидание в очереди сюда не входит — его ограничивает GitHub)
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+
+      # Capacitor 8 собирается новым Xcode — берём последний стабильный из установленных на образе
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
 
       - uses: actions/setup-node@v4
         with:
