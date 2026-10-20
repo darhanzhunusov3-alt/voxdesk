@@ -1,171 +1,176 @@
 /* =====================================================================
-   WOK Studio — ТЕМА ИНТЕРФЕЙСА (в стиле BandLab)
+   WOK Studio — ТЕМА ИНТЕРФЕЙСА «Obsidian Signal»
+   (эксперимент ветки feature/chatgpt-redesign: палитра предложена gpt-6.1-sol через scripts/ask-market.js)
    ---------------------------------------------------------------------
-   Здесь собраны ВСЕ цвета, шрифты, размеры, градиенты и тени.
-   Чтобы поменять дизайн, достаточно править этот файл.
-   Форму элементов (раскладку, скругления, расположение) меняют в css/app.css.
-   Код звука (js/engine.js, js/worklets.js) для дизайна трогать не нужно.
-   Подробные правила для другой нейросети — в DESIGN.md.
+   Здесь собраны ВСЕ цвета, градиенты, тени, шрифты и размеры.
+   Форму элементов меняют в css/app.css. Правила для другой нейросети — в DESIGN.md.
    ===================================================================== */
 
 :root {
   color-scheme: dark;
 
-  /* --- Фоны: матовый уголь и графит ------------------------------- */
-  --bg-app:            #0f1115;  /* фон приложения                     */
-  --bg-topbar:         #16181d;
-  --bg-panel:          #16181d;  /* панели, карточки треков            */
-  --bg-panel-2:        #1d2027;  /* поднятые элементы, наведение       */
-  --bg-panel-3:        #252932;  /* нажатые / выбранные                */
-  --bg-inset:          #0b0c10;  /* утопленные поля, дорожки ползунков */
-  --bg-lane:           #121419;  /* дорожка таймлайна                  */
-  --bg-lane-alt:       #111318;
-  --bg-head-sel:       #1f232b;  /* выбранный заголовок трека          */
-  --bg-overlay:        rgba(6,7,9,.72); /* фон под окнами плагинов    */
+  /* Фоны */
+  --bg-app:            #090c11;
+  --bg-topbar:         #131923;
+  --bg-panel:          #151c26;
+  --bg-panel-2:        #202a38;
+  --bg-panel-3:        #2c3747;
+  --bg-inset:          #080c12;
+  --bg-lane:           #101620;
+  --bg-lane-alt:       #0d121b;
+  --bg-head-sel:       #223344;
+  --bg-overlay:        rgba(3,6,11,.84);
 
-  /* --- Объём: мягкие градиенты (не плоско, но без «пластика») ---- */
-  --grad-app:          linear-gradient(180deg, #111318 0%, #0f1115 40%);
-  --grad-panel:        linear-gradient(180deg, #181a20 0%, #15171c 100%);
-  --grad-topbar:       linear-gradient(180deg, #181b21 0%, #14161b 100%);
-  --grad-title:        linear-gradient(180deg, #1c1f26 0%, #181a20 100%);
-  --grad-title-active: linear-gradient(180deg, #20232b 0%, #1a1d23 100%);
-  --grad-raised:       linear-gradient(180deg, #23272f 0%, #1d2027 100%);
-  --grad-raised-hover: linear-gradient(180deg, #2a2e37 0%, #23262e 100%);
-  --grad-pressed:      linear-gradient(180deg, #14161b 0%, #191b21 100%);
-  --grad-accent:       linear-gradient(180deg, #14dc8a 0%, #00c875 100%);
-  --grad-accent-2:     linear-gradient(180deg, #ffad2e 0%, #ff9900 100%);
-  --grad-rec:          linear-gradient(180deg, #ff5a50 0%, #ff3b30 100%);
-  --grad-lcd:          linear-gradient(180deg, #0c0d11 0%, #101217 100%);
-  --grad-strip:        linear-gradient(180deg, #191c22 0%, #16181d 100%);
-  --grad-strip-ret:    linear-gradient(180deg, #17202a 0%, #151a21 100%);
-  /* шаги Channel Rack: группы по 4 — графит / чуть теплее, включённый — зелёный */
-  --grad-step:         linear-gradient(180deg, #2a2e37 0%, #23262e 100%);
-  --grad-step-b:       linear-gradient(180deg, #312d33 0%, #29262c 100%);
-  --grad-step-on:      linear-gradient(180deg, #2ff0a0 0%, #00c875 100%);
-  --step-on-glow:      0 0 10px rgba(0,200,117,.45);
-  --knob-cap:          radial-gradient(circle at 40% 32%, #3a3f49 0%, #262a31 55%, #1a1d22 100%);
-  --fader-cap:         linear-gradient(180deg, #ffffff 0%, #e9ecf0 100%);   /* белый бегунок */
-  --fader-groove:      #0b0c10;
+  /* Матовые поверхности */
+  --grad-app:          radial-gradient(ellipse at 50% 0%, #182334 0%, #090c11 70%);
+  --grad-panel:        linear-gradient(180deg, #19222e, #141b25);
+  --grad-topbar:       linear-gradient(180deg, #1c2633, #111822);
+  --grad-title:        linear-gradient(180deg, #243040, #19222e);
+  --grad-title-active: linear-gradient(180deg, #2a4051, #1c2b3a);
+  --grad-raised:       linear-gradient(180deg, #303d4e, #202a38);
+  --grad-raised-hover: linear-gradient(180deg, #3b4a5e, #2a3748);
+  --grad-pressed:      linear-gradient(180deg, #0b111a, #19232f);
+  --grad-accent:       linear-gradient(180deg, #a4ffe0, #56edbb);
+  --grad-accent-2:     linear-gradient(180deg, #ffdc95, #ffc16b);
+  --grad-rec:          linear-gradient(180deg, #ffaaa9, #ff7485);
+  --grad-lcd:          linear-gradient(180deg, #060a10, #101a24);
+  --grad-strip:        linear-gradient(180deg, #1b2532, #111923);
+  --grad-strip-ret:    linear-gradient(180deg, #1c2d40, #131e2c);
+  --grad-step:         linear-gradient(180deg, #334154, #222d3c);
+  --grad-step-b:       linear-gradient(180deg, #423b49, #2e2835);
+  --grad-step-on:      linear-gradient(180deg, #a4ffe0, #56edbb);
+  --step-on-glow:      0 0 12px rgba(86,237,187,.3);
+  --knob-cap:          radial-gradient(circle at 35% 24%, #647185 0%, #354151 36%, #1d2734 70%, #101721 100%);
+  --fader-cap:         linear-gradient(180deg, #e2eaf2 0%, #a6b5c6 44%, #718499 49%, #c4d1de 54%, #8295aa 100%);
+  --fader-groove:      #080c12;
 
-  /* --- Тени ---------------------------------------------------------- */
-  --shadow-raised:     inset 0 1px 0 rgba(255,255,255,.05), 0 1px 2px rgba(0,0,0,.4);
-  --shadow-pressed:    inset 0 1px 3px rgba(0,0,0,.6);
-  --shadow-inset:      inset 0 1px 2px rgba(0,0,0,.55);
-  --shadow-panel:      0 1px 0 rgba(255,255,255,.03) inset, 0 8px 24px rgba(0,0,0,.28);
-  --shadow-window:     0 24px 64px rgba(0,0,0,.6), 0 2px 8px rgba(0,0,0,.4);
-  --shadow-knob:       0 2px 4px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.08);
-  --shadow-fader:      0 1px 3px rgba(0,0,0,.6), 0 0 0 1px rgba(0,0,0,.25);
-  --glow-accent:       0 0 12px rgba(0,200,117,.45);
-  --glow-accent-2:     0 0 12px rgba(255,153,0,.4);
-  --glow-rec:          0 0 14px rgba(255,59,48,.55);
-  --glow-led:          0 0 7px rgba(0,229,155,.8);
+  /* Тени */
+  --shadow-raised:     inset 0 1px 0 #ffffff16, 0 2px 4px #00000066;
+  --shadow-pressed:    inset 0 2px 5px #000000a6;
+  --shadow-inset:      inset 0 2px 4px #00000099;
+  --shadow-panel:      inset 0 1px 0 #ffffff0a, 0 8px 28px #00000040;
+  --shadow-window:     0 28px 80px #000000b3, 0 0 0 1px #ffffff14;
+  --shadow-knob:       0 3px 6px #000000b3, inset 0 1px 1px #ffffff33, inset 0 -2px 3px #00000080;
+  --shadow-fader:      0 3px 5px #000000b3, inset 0 1px 0 #ffffff99, 0 0 0 1px #05080d;
+  --glow-accent:       0 0 14px rgba(86,237,187,.25);
+  --glow-accent-2:     0 0 14px rgba(255,193,107,.23);
+  --glow-rec:          0 0 16px rgba(255,116,133,.35);
+  --glow-led:          0 0 8px rgba(123,255,208,.55);
   --text-emboss:       none;
 
-  /* --- Линии и сетка ------------------------------------------------ */
-  --line:              #252a34;  /* микро-бордер карточек и панелей    */
-  --line-soft:         #2f3542;
-  --grid-beat:         rgba(255,255,255,.035);
-  --grid-bar:          rgba(255,255,255,.11);
+  /* Линии */
+  --line:              #303d4e;
+  --line-soft:         #3b495c;
+  --grid-beat:         rgba(190,215,245,.055);
+  --grid-bar:          rgba(190,215,245,.17);
 
-  /* --- Текст ---------------------------------------------------------- */
-  --text:              #f1f3f6;
-  --text-dim:          #9aa2b1;
-  --text-faint:        #5d6573;
+  /* Текст: непрозрачные оттенки */
+  --text:              #eff5fc;
+  --text-dim:          #c1ccda;
+  --text-faint:        #adb9c9;
 
-  /* --- Акценты ---------------------------------------------------------- */
-  --accent:            #00c875;  /* изумрудный: вокал, активное, Fx     */
-  --accent-hi:         #00e59b;
-  --accent-soft:       rgba(0,200,117,.14);
-  --accent-text:       #04140d;  /* текст поверх акцента                */
-  --accent-2:          #ff9900;  /* янтарный: бит / инструментал, соло  */
-  --accent-2-soft:     rgba(255,153,0,.14);
-  --accent-2-text:     #1a0f00;
-  --led-on:            #00e59b;
-  --led-off:           #2a2f38;
-  --rec:               #ff3b30;
-  --playhead:          #ffffff;
-  --loop:              #00c875;  /* область цикла на линейке            */
-  --loop-soft:         rgba(0,200,117,.22);
-  --ret:               #6fb3e8;  /* каналы-возвраты (посылы)            */
-  --route:             #00e59b;  /* активный маршрут                    */
-  --danger:            #ff5a50;
+  /* Сигнальные цвета */
+  --accent:            #56edbb;
+  --accent-hi:         #a4ffe0;
+  --accent-soft:       rgba(86,237,187,.12);
+  --accent-text:       #071b15;
+  --accent-2:          #ffc16b;
+  --accent-2-soft:     rgba(255,193,107,.12);
+  --accent-2-text:     #241706;
+  --led-on:            #7bffd0;
+  --led-off:           #354254;
+  --rec:               #ff7485;
+  --playhead:          #e8fff7;
+  --loop:              #56edbb;
+  --loop-soft:         rgba(86,237,187,.16);
+  --ret:               #91caff;
+  --route:             #7bffd0;
+  --danger:            #ff919c;
 
-  /* --- Индикаторы уровня ------------------------------------------- */
-  --meter-lo:          #00c875;
-  --meter-mid:         #ffcc33;
-  --meter-hi:          #ff3b30;
-  --meter-bg:          #0b0c10;
+  /* Уровни */
+  --meter-lo:          #56edbb;
+  --meter-mid:         #ffcf76;
+  --meter-hi:          #ff7485;
+  --meter-bg:          #060a10;
 
-  /* --- Ручки и ползунки --------------------------------------------- */
-  --knob-ring:         #00c875;
-  --knob-track:        #0b0c10;
-  --knob-send:         #6fb3e8;
-  --slider-track:      #2a2f39;  /* дорожка ползунка                    */
-  --slider-fill:       #c9ced6;  /* заполненная часть громкости          */
-  --slider-thumb:      #ffffff;
+  /* Органы управления */
+  --knob-ring:         #56edbb;
+  --knob-track:        #354254;
+  --knob-send:         #91caff;
+  --slider-track:      #39485c;
+  --slider-fill:       #56edbb;
+  --slider-thumb:      #dce8f4;
 
-  /* --- Плагины: EQ и Soft Clipper ---------------------------------- */
-  --eq-grid:           rgba(255,255,255,.06);
-  --eq-fill:           rgba(0,200,117,.14);
-  --eq-band-1: #ff6b5f; --eq-band-2: #ff9900; --eq-band-3: #ffd23f; --eq-band-4: #00c875;
-  --eq-band-5: #2fd8c6; --eq-band-6: #5aa8ff; --eq-band-7: #a487ff;
+  /* EQ */
+  --eq-grid:           rgba(190,215,245,.1);
+  --eq-fill:           rgba(86,237,187,.14);
+  --eq-band-1:         #ff919c;
+  --eq-band-2:         #ffc16b;
+  --eq-band-3:         #f1e58d;
+  --eq-band-4:         #56edbb;
+  --eq-band-5:         #78e2e7;
+  --eq-band-6:         #91caff;
+  --eq-band-7:         #c4acff;
 
-  /* --- Цвета эффектов в цепочке (полоска слева у карточки) ---------- */
-  --fx-autotune:   #00c875;
-  --fx-vocalchain: #00e59b;
-  --fx-shkafx:     #a487ff;
-  --fx-eq:         #5aa8ff;
-  --fx-reverb:     #6fb3e8;
-  --fx-delay:      #2fd8c6;
-  --fx-chorus:     #ff6bb5;
-  --fx-clipper:    #ff9900;
+  /* Эффекты */
+  --fx-autotune:       #56edbb;
+  --fx-vocalchain:     #a4ffe0;
+  --fx-shkafx:         #c4acff;
+  --fx-eq:             #91caff;
+  --fx-reverb:         #a8beff;
+  --fx-delay:          #78e2e7;
+  --fx-chorus:         #ffa5d1;
+  --fx-clipper:        #ffc16b;
 
-  /* --- Цвета треков и клипов (номер = color у трека) --------------- */
-  --clip-1: #00c875;  /* вокал — изумрудный */
-  --clip-2: #2fd8c6;  /* бирюзовый          */
-  --clip-3: #a487ff;  /* фиолетовый         */
-  --clip-4: #ff6bb5;  /* розовый            */
-  --clip-5: #ff9900;  /* бит — янтарный     */
-  --clip-6: #5aa8ff;  /* синий              */
+  /* Клипы */
+  --clip-1:            #56edbb;
+  --clip-2:            #78e2e7;
+  --clip-3:            #c4acff;
+  --clip-4:            #ffa5d1;
+  --clip-5:            #ffc16b;
+  --clip-6:            #91caff;
 
-  /* --- Шрифты --------------------------------------------------------- */
-  --font-ui:   "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
-  --fs-xs:  11px;
-  --fs-s:   12px;
-  --fs-m:   13px;
-  --fs-l:   16px;
-  --fs-lcd: 18px;
+  /* Шрифты */
+  --font-ui:           "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono:         "JetBrains Mono", ui-monospace, Consolas, monospace;
+  --fs-xs:             11px;
+  --fs-s:              12px;
+  --fs-m:              13px;
+  --fs-l:              16px;
+  --fs-lcd:            18px;
 
-  /* --- Размеры -------------------------------------------------------- */
-  --radius:        8px;
-  --radius-s:      6px;
-  --radius-pill:   999px;
-  --topbar-h:      60px;
-  --track-h:       92px;
-  --track-head-w:  248px;
-  --ruler-h:       28px;
-  --beat-px:       28px;
-  --strip-w:       66px;
-  --drawer-h:      300px;  /* нижняя панель трека                       */
-  --tap:           28px;   /* минимальный размер кнопки (на телефоне больше) */
-  --gutter:        12px;   /* поля страницы слева и справа               */
-  --tap-step:      26px;   /* Channel Rack: размер шага                  */
-  --sheet-radius:  16px;
+  /* Размеры: исходные значения */
+  --radius:            8px;
+  --radius-s:          6px;
+  --radius-pill:       999px;
+  --topbar-h:          60px;
+  --track-h:           92px;
+  --track-head-w:      248px;
+  --ruler-h:           28px;
+  --beat-px:           28px;
+  --strip-w:           66px;
+  --drawer-h:          300px;
+  --tap:               28px;
+  --gutter:            12px;
+  --tap-step:          26px;
+  --sheet-radius:      16px;
+
+  /* Дополнительные токены */
+  --focus-ring:        #b7ffe8;
+  --metal-line:        #92a6bd;
 }
 
-/* --- Телефон: крупнее всё, во что тыкают пальцем -------------------- */
 @media (max-width: 820px) {
   :root {
-    --tap: 40px;
-    --gutter: 8px;
-    --track-h: 80px;
-    --track-head-w: 156px;
-    --ruler-h: 26px;
-    --fs-m: 14px;
-    --tap-step: 44px;   /* Channel Rack: зона нажатия шага, LED и кнопок панели канала */
-    --step-inset: 3px;  /* отступ видимого квадрата шага внутри зоны нажатия          */
-    --rack-pad-x: 2px;  /* поля Rack по бокам: 8 × --tap-step + 2 × поле ≤ 360 px     */
-    --mtabs-h: 58px;    /* нижний бар режимов (без safe-area)                         */
+    --tap:             40px;
+    --gutter:          8px;
+    --track-h:         80px;
+    --track-head-w:    156px;
+    --ruler-h:         26px;
+    --fs-m:            14px;
+    --tap-step:        44px;
+    --step-inset:      3px;
+    --rack-pad-x:      2px;
+    --mtabs-h:         58px;
   }
 }
