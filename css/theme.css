@@ -1,0 +1,145 @@
+/* =====================================================================
+   WOK Studio — ТЕМА ИНТЕРФЕЙСА
+   ---------------------------------------------------------------------
+   Здесь собраны ВСЕ цвета, шрифты, размеры, градиенты и тени.
+   Чтобы поменять дизайн, достаточно править этот файл.
+   Форму элементов (раскладку, скругления, расположение) меняют в css/app.css.
+   Код звука (js/engine.js, js/worklets.js) для дизайна трогать не нужно.
+   Подробные правила для другой нейросети — в DESIGN.md.
+   ===================================================================== */
+
+:root {
+  color-scheme: dark;
+
+  /* --- Фоны (антрацит в духе FL Studio 21/24) ----------------------- */
+  --bg-app:            #1b1e24;  /* общий фон за окнами               */
+  --bg-topbar:         #2a2f38;
+  --bg-panel:          #232731;  /* тело окон                          */
+  --bg-panel-2:        #2e333e;  /* поднятые элементы                  */
+  --bg-inset:          #14161b;  /* утопленные поля: LCD, слоты        */
+  --bg-lane:           #252a33;  /* дорожка плейлиста                  */
+  --bg-lane-alt:       #21252d;
+  --bg-title:          #333945;  /* заголовок неактивного окна         */
+  --bg-title-active:   #3f4655;  /* заголовок активного окна           */
+
+  /* --- Объём: градиенты ------------------------------------------- */
+  --grad-app:          radial-gradient(120% 80% at 50% 0%, #252932 0%, #17191e 72%);
+  --grad-panel:        linear-gradient(180deg, #292e38 0%, #22262f 100%);
+  --grad-topbar:       linear-gradient(180deg, #353b46 0%, #2a2f38 55%, #23272f 100%);
+  --grad-title:        linear-gradient(180deg, #3a414d 0%, #2f3540 100%);
+  --grad-title-active: linear-gradient(180deg, #4a5262 0%, #393f4c 100%);
+  --grad-raised:       linear-gradient(180deg, #454c59 0%, #383e49 50%, #30353f 100%);
+  --grad-raised-hover: linear-gradient(180deg, #505867 0%, #414856 50%, #383e4a 100%);
+  --grad-pressed:      linear-gradient(180deg, #1c1f25 0%, #262a32 100%);
+  --grad-accent:       linear-gradient(180deg, #ffb24d 0%, #ff8800 52%, #d96f00 100%);
+  --grad-rec:          linear-gradient(180deg, #ff7a6e 0%, #e6493f 55%, #b8322a 100%);
+  --grad-lcd:          linear-gradient(180deg, #0c0e11 0%, #161920 100%);
+  --grad-strip:        linear-gradient(180deg, #363c48 0%, #2c313b 30%, #262a33 100%);
+  --grad-strip-ret:    linear-gradient(180deg, #303d4c 0%, #2a3542 30%, #252e39 100%);
+  /* шаги: группы по 4 — серые / красноватые, включённый — оранжевый с бликом */
+  --grad-step:         linear-gradient(180deg, #535b68 0%, #444b57 55%, #3c424d 100%);
+  --grad-step-b:       linear-gradient(180deg, #6e4d50 0%, #5a3f42 55%, #4f373a 100%);
+  --grad-step-on:      linear-gradient(180deg, #ffd08a 0%, #ff9a1f 45%, #ff8800 60%, #cc6a00 100%);
+  --step-on-glow:      0 0 8px rgba(255,136,0,.55);
+  --knob-cap:          radial-gradient(circle at 36% 30%, #737c89 0%, #464d59 38%, #272b33 75%, #1b1e24 100%);
+  /* колпачок фейдера: шлифованный металл с бликом и риской посередине */
+  --fader-cap:         linear-gradient(180deg, #f7f9fb 0%, #d3d8de 22%, #9aa2ac 44%, #3a3f46 49%, #3a3f46 51%, #a7afb8 56%, #d9dee3 80%, #f2f4f6 100%);
+  --fader-groove:      linear-gradient(90deg, #07080a 0%, #1b1e24 50%, #07080a 100%);
+
+  /* --- Объём: тени ------------------------------------------------- */
+  --shadow-raised:     inset 0 1px 0 rgba(255,255,255,.13), inset 0 -1px 0 rgba(0,0,0,.3), 0 1px 2px rgba(0,0,0,.55);
+  --shadow-pressed:    inset 0 2px 4px rgba(0,0,0,.6), inset 0 0 0 1px rgba(0,0,0,.35);
+  --shadow-inset:      inset 0 2px 4px rgba(0,0,0,.65), inset 0 0 0 1px rgba(0,0,0,.4), 0 1px 0 rgba(255,255,255,.05);
+  --shadow-panel:      0 3px 10px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.05);
+  --shadow-window:     0 18px 40px rgba(0,0,0,.6), 0 2px 6px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.06);
+  --shadow-knob:       0 3px 6px rgba(0,0,0,.65), 0 1px 1px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.2);
+  --shadow-fader:      0 3px 5px rgba(0,0,0,.7), 0 0 0 1px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.9);
+  --glow-accent:       0 0 10px rgba(255,136,0,.5);
+  --glow-led:          0 0 7px rgba(166,225,92,.85);
+  --text-emboss:       0 1px 0 rgba(0,0,0,.6);
+
+  /* --- Линии и сетка ----------------------------------------------- */
+  --line:              #0d0f13;
+  --line-soft:         #3d4450;
+  --grid-beat:         rgba(255,255,255,.04);
+  --grid-bar:          rgba(255,255,255,.13);
+
+  /* --- Текст -------------------------------------------------------- */
+  --text:              #e3e7ee;
+  --text-dim:          #919aa8;
+  --text-faint:        #626b78;
+
+  /* --- Акценты ------------------------------------------------------ */
+  --accent:            #ff8800;  /* фирменный оранжевый: активное, выбор, ручки */
+  --accent-soft:       rgba(255,136,0,.16);
+  --accent-text:       #1d1203;  /* текст поверх акцента               */
+  --led-on:            #a6e15c;  /* неоновый лайм: индикаторы, LED     */
+  --led-off:           #2f3629;
+  --rec:               #e6493f;
+  --playhead:          #a6e15c;
+  --ret:               #6fb3e8;  /* каналы-возвраты (посылы)          */
+  --route:             #a6e15c;  /* активный маршрут в микшере         */
+
+  /* --- Индикаторы уровня ------------------------------------------- */
+  --meter-lo:          #a6e15c;
+  --meter-mid:         #e3c739;
+  --meter-hi:          #e8473b;
+  --meter-bg:          #0b0d10;
+
+  /* --- Ручки -------------------------------------------------------- */
+  --knob-ring:         #ff8800;
+  --knob-track:        #101216;
+  --knob-send:         #6fb3e8;  /* ручки посылов                      */
+
+  /* --- Плагины: EQ и Soft Clipper ---------------------------------- */
+  --eq-grid:           rgba(255,255,255,.07);
+  --eq-fill:           rgba(255,136,0,.16);
+  --eq-band-1: #e5735f; --eq-band-2: #e8a24f; --eq-band-3: #d8d15a; --eq-band-4: #78d06a;
+  --eq-band-5: #5fc6c0; --eq-band-6: #6f9de8; --eq-band-7: #b688e0;
+
+  /* --- Цвета клипов и дорожек (номер = color у дорожки) ------------- */
+  --clip-1: #5f92d8;
+  --clip-2: #d8735f;
+  --clip-3: #6fc177;
+  --clip-4: #b985d8;
+  --clip-5: #d8b45f;
+  --clip-6: #5fcbc6;
+
+  /* --- Шрифты ------------------------------------------------------- */
+  --font-ui:   "Barlow Semi Condensed", "Arial Narrow", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  --fs-xs:  11px;
+  --fs-s:   12px;
+  --fs-m:   13px;
+  --fs-l:   16px;
+  --fs-lcd: 20px;
+
+  /* --- Размеры ------------------------------------------------------ */
+  --radius:        4px;
+  --radius-s:      3px;
+  --topbar-h:      54px;
+  --track-h:       60px;
+  --track-head-w:  204px;
+  --ruler-h:       24px;
+  --beat-px:       28px;
+  --strip-w:       66px;
+  --tap:           28px;   /* минимальный размер кнопки (на телефоне больше) */
+  --gutter:        16px;   /* поля страницы слева и справа                   */
+}
+
+/* --- Телефон: крупнее всё, во что тыкают пальцем -------------------- */
+@media (max-width: 820px) {
+  :root {
+    --tap: 40px;
+    --gutter: 8px;
+    --track-h: 68px;
+    --track-head-w: 140px;
+    --strip-w: 74px;
+    --fs-m: 14px;
+    --tap-step: 44px;   /* Channel Rack: зона нажатия шага, LED и кнопок панели канала */
+    --step-inset: 3px;  /* отступ видимого квадрата шага внутри зоны нажатия          */
+    --rack-pad-x: 2px;  /* поля Rack по бокам: 8 × --tap-step + 2 × поле ≤ 360 px     */
+    --mtabs-h: 56px;    /* нижний таб-бар (без safe-area)                             */
+    --sheet-radius: 14px;
+  }
+}

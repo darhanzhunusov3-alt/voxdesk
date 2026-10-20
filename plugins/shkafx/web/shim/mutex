@@ -1,0 +1,7 @@
+// Заглушка <mutex>: в WebAssembly всё выполняется в одном потоке, блокировки не нужны.
+#pragma once
+namespace std {
+struct mutex { void lock() {} void unlock() {} bool try_lock() { return true; } };
+template <class M> struct lock_guard { explicit lock_guard (M&) {} };
+template <class M> struct unique_lock { explicit unique_lock (M&) {} void lock() {} void unlock() {} };
+}

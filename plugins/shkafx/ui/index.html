@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ShkaFX</title>
+  <link rel="stylesheet" href="style.css">
+  <script>
+    // масштаб окна на небольших экранах: плагин передаёт его заранее (window.__lfZoom), в браузере — ?zoom=0.8
+    (function () {
+      var m = /[?&]zoom=([0-9.]+)/.exec(location.search);
+      var z = m ? parseFloat(m[1]) : window.__lfZoom;
+      if (z && z > 0 && z < 1) document.documentElement.style.zoom = z;
+    })();
+  </script>
+</head>
+<body>
+  <!-- заставка загрузки (такая же рисуется плагином, пока запускается движок); плавно исчезает, когда всё готово -->
+  <div class="boot" id="boot" aria-hidden="true">
+    <svg class="boot-logo" viewBox="0 0 32 32"><defs><linearGradient id="lgB" x1="3" y1="0" x2="29" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c4bbff" stop-opacity=".25"/><stop offset=".3" stop-color="#c4bbff"/><stop offset=".7" stop-color="#c4bbff"/><stop offset="1" stop-color="#c4bbff" stop-opacity=".25"/></linearGradient></defs><circle cx="16" cy="16" r="15"/><path class="lg-glow" d="M3.8 16h1.6l1.1-2.4 1.2 4.6 1.1-3.2 1.2 1.2 L10 10.5 L13 21.5 L16 13 L19 21.5 L22 10.5 L23 15.8l1.1-1.2 1.2 3.2 1.1-4.6 1.1 2.4h1.7"/><path class="lg-line" style="stroke:url(#lgB)" d="M3.8 16h1.6l1.1-2.4 1.2 4.6 1.1-3.2 1.2 1.2 L10 10.5 L13 21.5 L16 13 L19 21.5 L22 10.5 L23 15.8l1.1-1.2 1.2 3.2 1.1-4.6 1.1 2.4h1.7"/></svg>
+    <div class="boot-name">ShkaFX</div>
+    <div class="boot-morph"></div>
+    <div class="boot-text">Loading…</div>
+  </div>
+  <!--
+    Интерфейс ShkaFX. Перерисовывать можно свободно: протокол обмена с плагином — в UI_API.md.
+    Для предпросмотра без плагина откройте этот файл в браузере.
+  -->
+  <header class="topbar">
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><defs><linearGradient id="lgT" x1="3" y1="0" x2="29" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c4bbff" stop-opacity=".25"/><stop offset=".3" stop-color="#c4bbff"/><stop offset=".7" stop-color="#c4bbff"/><stop offset="1" stop-color="#c4bbff" stop-opacity=".25"/></linearGradient></defs><circle cx="16" cy="16" r="15" /><path class="lg-glow" d="M3.8 16h1.6l1.1-2.4 1.2 4.6 1.1-3.2 1.2 1.2 L10 10.5 L13 21.5 L16 13 L19 21.5 L22 10.5 L23 15.8l1.1-1.2 1.2 3.2 1.1-4.6 1.1 2.4h1.7"/><path class="lg-line" style="stroke:url(#lgT)" d="M3.8 16h1.6l1.1-2.4 1.2 4.6 1.1-3.2 1.2 1.2 L10 10.5 L13 21.5 L16 13 L19 21.5 L22 10.5 L23 15.8l1.1-1.2 1.2 3.2 1.1-4.6 1.1 2.4h1.7"/></svg><span class="brand-text"><span class="brand-name">ShkaFX</span><span class="brand-handle">@shkaf232</span></span>
+    </div>
+    <div class="transport">
+      <div class="bpm" id="bpm"></div>
+      <div class="pos-box"><span class="pos-label">Bar</span><span class="pos" id="pos">—</span></div>
+    </div>
+    <div class="io">
+      <div class="meter-row"><span>Out</span><div class="meter"><i id="m-out"></i></div></div>
+      <div id="io-out"></div>
+      <button class="btn" id="btn-undo" title="Undo (Ctrl+Z)" disabled><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M5.5 3 2.5 6l3 3M3 6h6.5a4 4 0 0 1 0 8H7"/></svg><span class="lbl">Undo</span></button>
+      <button class="btn" id="btn-redo" title="Redo (Ctrl+Y or Ctrl+Shift+Z)" disabled><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M10.5 3l3 3-3 3M13 6H6.5a4 4 0 0 0 0 8H9"/></svg></button>
+      <button class="btn" id="btn-reset" title="Set all knobs back to default"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M13 8a5 5 0 1 1-1.5-3.6M13 2.5v3h-3"/></svg><span class="lbl">Reset knobs</span></button>
+    </div>
+  </header>
+
+  <section class="wave-panel" aria-label="Waveform">
+    <div class="wave-tools">
+      <div class="source" id="source">
+        <span class="source-label">Source:</span>
+        <span class="source-name" id="source-name">project audio</span>
+        <button class="btn" id="btn-load" title="Load your rendered vocal (WAV, AIFF, FLAC, MP3). You can also drag & drop it here"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4.5h4l1.5 1.5H14v6.5a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1z"/></svg><span class="lbl">Load file…</span></button>
+        <button class="btn" id="btn-project" hidden><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 4 2 8l4 4M2.5 8H11a3 3 0 0 1 0 6H9"/></svg><span class="lbl">Back to project</span></button>
+        <button class="btn play" id="btn-play" title="Play inside the plugin: vocal + tails + delays, no need to start FL (Space). Double-click the waveform or bar numbers to play from there"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path class="fillp" d="M5 3.5v9l7.5-4.5z"/></svg><span class="lbl">Прослушать</span></button>
+      </div>
+      <span class="spacer"></span>
+      <div class="tools" role="radiogroup" aria-label="Region type">
+        <span class="tools-label">Mark:</span>
+        <button class="tool t0 on" data-tool="0" title="First syllable: a reverb tail swells in before it">Tail</button>
+        <button class="tool t1" data-tool="1" title="The word that goes into Delay A">Delay A</button>
+        <button class="tool t2" data-tool="2" title="The word that goes into Delay B">Delay B</button>
+        <button class="tool tall" id="tool-all" title="Move and select all regions at once. New regions use the type picked on the left">All</button>
+      </div>
+    </div>
+    <canvas id="wave"></canvas>
+    <input type="range" id="wave-scroll" class="wave-scroll" min="0" max="30" step="0.1" value="0" aria-label="Scroll">
+    <div class="inspector" id="inspector"></div>
+    <div class="wave-bottom">
+      <div class="view-tools">
+        <button class="btn" id="btn-zoom-out" title="Zoom out">−</button>
+        <button class="btn" id="btn-zoom-in" title="Zoom in">+</button>
+        <button class="btn" id="btn-fit"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4"/></svg><span class="lbl">Fit all</span></button>
+        <label class="check switch" title="The waveform scrolls with the playhead"><input type="checkbox" id="chk-follow" checked><span>Follow</span></label>
+        <button class="btn" id="btn-wipe" title="Erase the recorded waveform to record the next line. Regions, tails, echoes and their settings stay and keep playing"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 12.5h10M4.5 10l5-6.5 3 2.3-4 5.2H6z"/></svg><span class="lbl">Clear wave</span></button>
+        <button class="btn" id="btn-clear"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 4.5h10M6 4.5V3h4v1.5M4.5 4.5l.7 9h5.6l.7-9"/></svg><span class="lbl">Delete all regions</span></button>
+      </div>
+      <div class="export" id="export">
+        <span class="tools-label">Export WAV:</span>
+        <button class="btn" id="btn-exp-each" title="Every tail and delay as its own file. Each file starts right on the beat, the bar is in the file name"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.5v8M4.5 7 8 10.5 11.5 7M3 13.5h10"/></svg><span class="lbl">Separate files</span></button>
+        <button class="btn" id="btn-exp-all" title="One file with all effects, from the project start (place it at bar 1)"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.5v8M4.5 7 8 10.5 11.5 7M3 13.5h10"/></svg><span class="lbl">One file</span></button>
+        <label class="check switch" id="chk-vocal-box" title="One file: add the vocal itself to the effects"><input type="checkbox" id="chk-vocal"><span>with vocal</span></label>
+        <button class="btn" id="btn-folder" title="Open Documents\ShkaFX"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4.5h4l1.5 1.5H14v6.5a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1z"/></svg><span class="lbl">Folder</span></button>
+      </div>
+    </div>
+    <div class="wave-hint" id="hint">Pick a type and drag across the waveform: Tail — over the first syllable, Delay A/B — over the word you want to echo. Click a region to edit only it. Corner squares on delay regions fade the word in and out. Double-click the waveform or bar numbers to play from there (Space — stop). Drag & drop a .wav or play your project. Wheel — zoom, Shift + wheel — scroll, Delete — remove, Ctrl+Z — undo.</div>
+  </section>
+
+  <div class="scope-bar" id="scope-bar"></div>
+  <main class="panels">
+    <section class="panel" id="panel-swell"></section>
+    <section class="panel" id="panel-delay"></section>
+  </main>
+
+  <div class="toast" id="toast" hidden></div>
+  <div class="drop" id="drop" hidden><div>Drop to load the vocal into ShkaFX</div></div>
+
+  <script src="mock-params.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

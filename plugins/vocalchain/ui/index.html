@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VocalChain</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!--
+    Интерфейс VocalChain. Можно свободно перерисовывать: вся связь с плагином
+    описана в UI_API.md. Для предпросмотра без плагина просто откройте этот файл
+    в браузере — подключится mock-params.js с параметрами по умолчанию.
+  -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-name">VocalChain</span>
+      <span class="brand-sub" id="status">Загрузка…</span>
+    </div>
+    <div class="io">
+      <div class="io-block" id="io-in"></div>
+      <div class="io-meters">
+        <div class="meter-row"><span>In</span><div class="meter"><i id="m-in"></i></div></div>
+        <div class="meter-row"><span>Out</span><div class="meter"><i id="m-out"></i></div></div>
+      </div>
+      <div class="io-block" id="io-out"></div>
+    </div>
+    <div class="actions">
+      <button class="btn" id="btn-reset" title="Вернуть все ручки к вашему пресету">Сбросить к пресету</button>
+    </div>
+  </header>
+
+  <section class="types" aria-label="Что это за дорожка">
+    <div class="types-row" id="types" role="radiogroup"></div>
+    <div class="quick" id="quick" hidden></div>
+    <div class="types-foot">
+      <p class="types-note" id="type-note"></p>
+      <button class="btn fine-btn" id="btn-fine" aria-expanded="false">Тонкая настройка ▾</button>
+    </div>
+  </section>
+
+  <div class="fine" id="fine" hidden>
+    <nav class="chain" id="chain" aria-label="Цепочка обработки"></nav>
+    <main class="module" id="module"></main>
+    <footer class="hint">
+      Двойной клик по ручке — значение по умолчанию. Shift + перетаскивание — точная настройка. Клик по цифрам — ввести значение.
+    </footer>
+  </div>
+
+  <script src="mock-params.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

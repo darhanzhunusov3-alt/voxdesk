@@ -1,0 +1,13 @@
+// Заглушка <thread> для сборки ShkaFX в WebAssembly без потоков: фоновую работу
+// вместо отдельного потока выполняет Web Worker браузера (вызов pump()).
+#pragma once
+namespace std {
+struct thread {
+  thread() = default;
+  template <class F> explicit thread (F&&) {}
+  thread (thread&&) = default;
+  thread& operator= (thread&&) = default;
+  bool joinable() const { return false; }
+  void join() {}
+};
+}
