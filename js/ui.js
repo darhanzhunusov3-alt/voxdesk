@@ -1851,6 +1851,55 @@
     }
   });
 
+  /* ------------------------------ ТЕМЫ ОФОРМЛЕНИЯ ------------------------------
+     data-theme на <html> (оттуда JS читает цвета индикаторов и графиков) и на <body>; выбор хранится в localStorage. */
+  const THEMES = {
+    classic: { name: 'BandLab Classic', sub: 'Матовый уголь, изумруд и янтарь', sw: ['#0f1115', '#16181d', '#00c875', '#ff9900'] },
+    obsidian: { name: 'Obsidian Signal', sub: 'Холодный графит и мятный неон', sw: ['#090c11', '#151c26', '#56edbb', '#ffc16b'] }
+  };
+  const THEME_KEY = 'wok-theme';
+  function currentTheme() { const t = document.documentElement.getAttribute('data-theme'); return THEMES[t] ? t : 'classic'; }
+  function applyTheme(t) {
+    if (!THEMES[t]) t = 'classic';
+    document.documentElement.setAttribute('data-theme', t); document.body.setAttribute('data-theme', t);
+    Object.keys(meterColors).forEach((k) => delete meterColors[k]); // индикаторы перечитают цвета
+    renderPlaylist(); // волны клипов перерисуются цветом новой темы
+  }
+  function setTheme(t) {
+    applyTheme(t);
+    try { localStorage.setItem(THEME_KEY, t); } catch (e) {}
+    Vox.hint('Тема оформления: ' + THEMES[currentTheme()].name);
+  }
+  function openSettings() {
+    setMenu(false);
+    openSheet('Настройки', 'WOK Studio', (sh) => {
+      const box = el('div', 'sheet-ctl');
+      box.appendChild(el('div', 'set-label', 'Тема оформления'));
+      const list = el('div', 'theme-list'); list.setAttribute('role', 'radiogroup'); list.setAttribute('aria-label', 'Тема оформления');
+      let first = null;
+      Object.entries(THEMES).forEach(([id, th]) => {
+        const b = el('button', 'theme-opt'); b.dataset.theme = id; b.setAttribute('role', 'radio');
+        const sw = el('span', 'theme-sw'); th.sw.forEach((c) => { const i = el('i'); i.style.background = c; sw.appendChild(i); });
+        const tx = el('span', 'theme-tx'); tx.append(el('b', '', th.name), el('span', '', th.sub));
+        b.append(sw, tx);
+        const sync = () => list.querySelectorAll('.theme-opt').forEach((x) => { const on = x.dataset.theme === currentTheme(); x.classList.toggle('on', on); x.setAttribute('aria-checked', String(on)); x.tabIndex = on ? 0 : -1; });
+        b.onclick = () => { setTheme(id); sync(); };
+        b.onkeydown = (e) => {
+          if (!['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight'].includes(e.key)) return;
+          e.preventDefault(); const ids = Object.keys(THEMES), n = (ids.indexOf(id) + (e.key === 'ArrowDown' || e.key === 'ArrowRight' ? 1 : ids.length - 1)) % ids.length;
+          setTheme(ids[n]); sync(); list.querySelector('[data-theme="' + ids[n] + '"]').focus();
+        };
+        list.appendChild(b); if (!first) first = b; sync();
+      });
+      box.appendChild(list);
+      box.appendChild(el('p', 'set-note', 'Тема меняется сразу и запоминается в этом браузере.'));
+      sh.appendChild(box);
+      return list.querySelector('.theme-opt.on') || first;
+    });
+  }
+  $('btnSettings').onclick = openSettings;
+  $('mSettings').onclick = openSettings;
+
   /* ------------------------------ ЗАПУСК ------------------------------ */
   document.addEventListener('pointerdown', () => { Vox.resume().catch(() => {}); }, { once: true, capture: true });
   Vox.on('ready', () => {
@@ -1860,6 +1909,9 @@
   });
 
   $('projName').textContent = st.projectName;
+  let savedTheme = null; try { savedTheme = localStorage.getItem(THEME_KEY); } catch (e) {}
+  document.body.setAttribute('data-theme', THEMES[savedTheme] ? savedTheme : currentTheme());
+  document.documentElement.setAttribute('data-theme', document.body.getAttribute('data-theme'));
   syncKey(); syncMaster(); syncLibraryBtn();
   renderBrowser(); renderPlaylist(); syncTransport(); syncRecPane();
   buildRack($('paneBeat')); openDrawer('fx');

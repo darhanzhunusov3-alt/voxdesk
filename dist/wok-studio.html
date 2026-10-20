@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru">
+<html lang="ru" data-theme="classic">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -8,182 +8,289 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<!-- тема оформления до первой отрисовки (без вспышки): classic | obsidian, выбор в ⚙ Настройках -->
+<script>try{var t=localStorage.getItem('wok-theme');if(t==='classic'||t==='obsidian')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 <style>
 /* =====================================================================
-   WOK Studio — ТЕМА ИНТЕРФЕЙСА «Obsidian Signal»
-   (эксперимент ветки feature/chatgpt-redesign: палитра предложена gpt-6.1-sol через scripts/ask-market.js)
+   WOK Studio — ТЕМЫ ИНТЕРФЕЙСА
+   «BandLab Classic» — :root (по умолчанию), «Obsidian Signal» — [data-theme="obsidian"] ниже.
+   Тема выбирается в настройках (⚙), хранится в localStorage («wok-theme»), атрибут data-theme ставится на <html> и <body>.
    ---------------------------------------------------------------------
-   Здесь собраны ВСЕ цвета, градиенты, тени, шрифты и размеры.
-   Форму элементов меняют в css/app.css. Правила для другой нейросети — в DESIGN.md.
+   Здесь собраны ВСЕ цвета, шрифты, размеры, градиенты и тени.
+   Чтобы поменять дизайн, достаточно править этот файл.
+   Форму элементов (раскладку, скругления, расположение) меняют в css/app.css.
+   Код звука (js/engine.js, js/worklets.js) для дизайна трогать не нужно.
+   Подробные правила для другой нейросети — в DESIGN.md.
    ===================================================================== */
 
 :root {
   color-scheme: dark;
 
-  /* Фоны */
-  --bg-app:            #090c11;
-  --bg-topbar:         #131923;
-  --bg-panel:          #151c26;
-  --bg-panel-2:        #202a38;
-  --bg-panel-3:        #2c3747;
-  --bg-inset:          #080c12;
-  --bg-lane:           #101620;
-  --bg-lane-alt:       #0d121b;
-  --bg-head-sel:       #223344;
-  --bg-overlay:        rgba(3,6,11,.84);
+  /* --- Фоны: матовый уголь и графит ------------------------------- */
+  --bg-app:            #0f1115;  /* фон приложения                     */
+  --bg-topbar:         #16181d;
+  --bg-panel:          #16181d;  /* панели, карточки треков            */
+  --bg-panel-2:        #1d2027;  /* поднятые элементы, наведение       */
+  --bg-panel-3:        #252932;  /* нажатые / выбранные                */
+  --bg-inset:          #0b0c10;  /* утопленные поля, дорожки ползунков */
+  --bg-lane:           #121419;  /* дорожка таймлайна                  */
+  --bg-lane-alt:       #111318;
+  --bg-head-sel:       #1f232b;  /* выбранный заголовок трека          */
+  --bg-overlay:        rgba(6,7,9,.72); /* фон под окнами плагинов    */
 
-  /* Матовые поверхности */
-  --grad-app:          radial-gradient(ellipse at 50% 0%, #182334 0%, #090c11 70%);
-  --grad-panel:        linear-gradient(180deg, #19222e, #141b25);
-  --grad-topbar:       linear-gradient(180deg, #1c2633, #111822);
-  --grad-title:        linear-gradient(180deg, #243040, #19222e);
-  --grad-title-active: linear-gradient(180deg, #2a4051, #1c2b3a);
-  --grad-raised:       linear-gradient(180deg, #303d4e, #202a38);
-  --grad-raised-hover: linear-gradient(180deg, #3b4a5e, #2a3748);
-  --grad-pressed:      linear-gradient(180deg, #0b111a, #19232f);
-  --grad-accent:       linear-gradient(180deg, #a4ffe0, #56edbb);
-  --grad-accent-2:     linear-gradient(180deg, #ffdc95, #ffc16b);
-  --grad-rec:          linear-gradient(180deg, #ffaaa9, #ff7485);
-  --grad-lcd:          linear-gradient(180deg, #060a10, #101a24);
-  --grad-strip:        linear-gradient(180deg, #1b2532, #111923);
-  --grad-strip-ret:    linear-gradient(180deg, #1c2d40, #131e2c);
-  --grad-step:         linear-gradient(180deg, #334154, #222d3c);
-  --grad-step-b:       linear-gradient(180deg, #423b49, #2e2835);
-  --grad-step-on:      linear-gradient(180deg, #a4ffe0, #56edbb);
-  --step-on-glow:      0 0 12px rgba(86,237,187,.3);
-  --knob-cap:          radial-gradient(circle at 35% 24%, #647185 0%, #354151 36%, #1d2734 70%, #101721 100%);
-  --fader-cap:         linear-gradient(180deg, #e2eaf2 0%, #a6b5c6 44%, #718499 49%, #c4d1de 54%, #8295aa 100%);
-  --fader-groove:      #080c12;
+  /* --- Объём: мягкие градиенты (не плоско, но без «пластика») ---- */
+  --grad-app:          linear-gradient(180deg, #111318 0%, #0f1115 40%);
+  --grad-panel:        linear-gradient(180deg, #181a20 0%, #15171c 100%);
+  --grad-topbar:       linear-gradient(180deg, #181b21 0%, #14161b 100%);
+  --grad-title:        linear-gradient(180deg, #1c1f26 0%, #181a20 100%);
+  --grad-title-active: linear-gradient(180deg, #20232b 0%, #1a1d23 100%);
+  --grad-raised:       linear-gradient(180deg, #23272f 0%, #1d2027 100%);
+  --grad-raised-hover: linear-gradient(180deg, #2a2e37 0%, #23262e 100%);
+  --grad-pressed:      linear-gradient(180deg, #14161b 0%, #191b21 100%);
+  --grad-accent:       linear-gradient(180deg, #14dc8a 0%, #00c875 100%);
+  --grad-accent-2:     linear-gradient(180deg, #ffad2e 0%, #ff9900 100%);
+  --grad-rec:          linear-gradient(180deg, #ff5a50 0%, #ff3b30 100%);
+  --grad-lcd:          linear-gradient(180deg, #0c0d11 0%, #101217 100%);
+  --grad-strip:        linear-gradient(180deg, #191c22 0%, #16181d 100%);
+  --grad-strip-ret:    linear-gradient(180deg, #17202a 0%, #151a21 100%);
+  /* шаги Channel Rack: группы по 4 — графит / чуть теплее, включённый — зелёный */
+  --grad-step:         linear-gradient(180deg, #2a2e37 0%, #23262e 100%);
+  --grad-step-b:       linear-gradient(180deg, #312d33 0%, #29262c 100%);
+  --grad-step-on:      linear-gradient(180deg, #2ff0a0 0%, #00c875 100%);
+  --step-on-glow:      0 0 10px rgba(0,200,117,.45);
+  --knob-cap:          radial-gradient(circle at 40% 32%, #3a3f49 0%, #262a31 55%, #1a1d22 100%);
+  --fader-cap:         linear-gradient(180deg, #ffffff 0%, #e9ecf0 100%);   /* белый бегунок */
+  --fader-groove:      #0b0c10;
 
-  /* Тени */
-  --shadow-raised:     inset 0 1px 0 #ffffff16, 0 2px 4px #00000066;
-  --shadow-pressed:    inset 0 2px 5px #000000a6;
-  --shadow-inset:      inset 0 2px 4px #00000099;
-  --shadow-panel:      inset 0 1px 0 #ffffff0a, 0 8px 28px #00000040;
-  --shadow-window:     0 28px 80px #000000b3, 0 0 0 1px #ffffff14;
-  --shadow-knob:       0 3px 6px #000000b3, inset 0 1px 1px #ffffff33, inset 0 -2px 3px #00000080;
-  --shadow-fader:      0 3px 5px #000000b3, inset 0 1px 0 #ffffff99, 0 0 0 1px #05080d;
-  --glow-accent:       0 0 14px rgba(86,237,187,.25);
-  --glow-accent-2:     0 0 14px rgba(255,193,107,.23);
-  --glow-rec:          0 0 16px rgba(255,116,133,.35);
-  --glow-led:          0 0 8px rgba(123,255,208,.55);
+  /* --- Тени ---------------------------------------------------------- */
+  --shadow-raised:     inset 0 1px 0 rgba(255,255,255,.05), 0 1px 2px rgba(0,0,0,.4);
+  --shadow-pressed:    inset 0 1px 3px rgba(0,0,0,.6);
+  --shadow-inset:      inset 0 1px 2px rgba(0,0,0,.55);
+  --shadow-panel:      0 1px 0 rgba(255,255,255,.03) inset, 0 8px 24px rgba(0,0,0,.28);
+  --shadow-window:     0 24px 64px rgba(0,0,0,.6), 0 2px 8px rgba(0,0,0,.4);
+  --shadow-knob:       0 2px 4px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.08);
+  --shadow-fader:      0 1px 3px rgba(0,0,0,.6), 0 0 0 1px rgba(0,0,0,.25);
+  --glow-accent:       0 0 12px rgba(0,200,117,.45);
+  --glow-accent-2:     0 0 12px rgba(255,153,0,.4);
+  --glow-rec:          0 0 14px rgba(255,59,48,.55);
+  --glow-led:          0 0 7px rgba(0,229,155,.8);
   --text-emboss:       none;
 
-  /* Линии */
-  --line:              #303d4e;
-  --line-soft:         #3b495c;
-  --grid-beat:         rgba(190,215,245,.055);
-  --grid-bar:          rgba(190,215,245,.17);
+  /* --- Линии и сетка ------------------------------------------------ */
+  --line:              #252a34;  /* микро-бордер карточек и панелей    */
+  --line-soft:         #2f3542;
+  --grid-beat:         rgba(255,255,255,.035);
+  --grid-bar:          rgba(255,255,255,.11);
 
-  /* Текст: непрозрачные оттенки */
-  --text:              #eff5fc;
-  --text-dim:          #c1ccda;
-  --text-faint:        #adb9c9;
+  /* --- Текст ---------------------------------------------------------- */
+  --text:              #f1f3f6;
+  --text-dim:          #9aa2b1;
+  --text-faint:        #5d6573;
 
-  /* Сигнальные цвета */
-  --accent:            #56edbb;
-  --accent-hi:         #a4ffe0;
-  --accent-soft:       rgba(86,237,187,.12);
-  --accent-text:       #071b15;
-  --accent-2:          #ffc16b;
-  --accent-2-soft:     rgba(255,193,107,.12);
-  --accent-2-text:     #241706;
-  --led-on:            #7bffd0;
-  --led-off:           #354254;
-  --rec:               #ff7485;
-  --playhead:          #e8fff7;
-  --loop:              #56edbb;
-  --loop-soft:         rgba(86,237,187,.16);
-  --ret:               #91caff;
-  --route:             #7bffd0;
-  --danger:            #ff919c;
+  /* --- Акценты ---------------------------------------------------------- */
+  --accent:            #00c875;  /* изумрудный: вокал, активное, Fx     */
+  --accent-hi:         #00e59b;
+  --accent-soft:       rgba(0,200,117,.14);
+  --accent-text:       #04140d;  /* текст поверх акцента                */
+  --accent-2:          #ff9900;  /* янтарный: бит / инструментал, соло  */
+  --accent-2-soft:     rgba(255,153,0,.14);
+  --accent-2-text:     #1a0f00;
+  --led-on:            #00e59b;
+  --led-off:           #2a2f38;
+  --rec:               #ff3b30;
+  --playhead:          #ffffff;
+  --loop:              #00c875;  /* область цикла на линейке            */
+  --loop-soft:         rgba(0,200,117,.22);
+  --ret:               #6fb3e8;  /* каналы-возвраты (посылы)            */
+  --route:             #00e59b;  /* активный маршрут                    */
+  --danger:            #ff5a50;
 
-  /* Уровни */
-  --meter-lo:          #56edbb;
-  --meter-mid:         #ffcf76;
-  --meter-hi:          #ff7485;
-  --meter-bg:          #060a10;
+  /* --- Индикаторы уровня ------------------------------------------- */
+  --meter-lo:          #00c875;
+  --meter-mid:         #ffcc33;
+  --meter-hi:          #ff3b30;
+  --meter-bg:          #0b0c10;
 
-  /* Органы управления */
-  --knob-ring:         #56edbb;
-  --knob-track:        #354254;
-  --knob-send:         #91caff;
-  --slider-track:      #39485c;
-  --slider-fill:       #56edbb;
-  --slider-thumb:      #dce8f4;
+  /* --- Ручки и ползунки --------------------------------------------- */
+  --knob-ring:         #00c875;
+  --knob-track:        #0b0c10;
+  --knob-send:         #6fb3e8;
+  --slider-track:      #2a2f39;  /* дорожка ползунка                    */
+  --slider-fill:       #c9ced6;  /* заполненная часть громкости          */
+  --slider-thumb:      #ffffff;
 
-  /* EQ */
-  --eq-grid:           rgba(190,215,245,.1);
-  --eq-fill:           rgba(86,237,187,.14);
-  --eq-band-1:         #ff919c;
-  --eq-band-2:         #ffc16b;
-  --eq-band-3:         #f1e58d;
-  --eq-band-4:         #56edbb;
-  --eq-band-5:         #78e2e7;
-  --eq-band-6:         #91caff;
-  --eq-band-7:         #c4acff;
+  /* --- Плагины: EQ и Soft Clipper ---------------------------------- */
+  --eq-grid:           rgba(255,255,255,.06);
+  --eq-fill:           rgba(0,200,117,.14);
+  --eq-band-1: #ff6b5f; --eq-band-2: #ff9900; --eq-band-3: #ffd23f; --eq-band-4: #00c875;
+  --eq-band-5: #2fd8c6; --eq-band-6: #5aa8ff; --eq-band-7: #a487ff;
 
-  /* Эффекты */
-  --fx-autotune:       #56edbb;
-  --fx-vocalchain:     #a4ffe0;
-  --fx-shkafx:         #c4acff;
-  --fx-eq:             #91caff;
-  --fx-reverb:         #a8beff;
-  --fx-delay:          #78e2e7;
-  --fx-chorus:         #ffa5d1;
-  --fx-clipper:        #ffc16b;
+  /* --- Цвета эффектов в цепочке (полоска слева у карточки) ---------- */
+  --fx-autotune:   #00c875;
+  --fx-vocalchain: #00e59b;
+  --fx-shkafx:     #a487ff;
+  --fx-eq:         #5aa8ff;
+  --fx-reverb:     #6fb3e8;
+  --fx-delay:      #2fd8c6;
+  --fx-chorus:     #ff6bb5;
+  --fx-clipper:    #ff9900;
 
-  /* Клипы */
-  --clip-1:            #56edbb;
-  --clip-2:            #78e2e7;
-  --clip-3:            #c4acff;
-  --clip-4:            #ffa5d1;
-  --clip-5:            #ffc16b;
-  --clip-6:            #91caff;
+  /* --- Цвета треков и клипов (номер = color у трека) --------------- */
+  --clip-1: #00c875;  /* вокал — изумрудный */
+  --clip-2: #2fd8c6;  /* бирюзовый          */
+  --clip-3: #a487ff;  /* фиолетовый         */
+  --clip-4: #ff6bb5;  /* розовый            */
+  --clip-5: #ff9900;  /* бит — янтарный     */
+  --clip-6: #5aa8ff;  /* синий              */
 
-  /* Шрифты */
-  --font-ui:           "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono:         "JetBrains Mono", ui-monospace, Consolas, monospace;
-  --fs-xs:             11px;
-  --fs-s:              12px;
-  --fs-m:              13px;
-  --fs-l:              16px;
-  --fs-lcd:            18px;
+  /* --- Шрифты --------------------------------------------------------- */
+  --font-ui:   "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  --fs-xs:  11px;
+  --fs-s:   12px;
+  --fs-m:   13px;
+  --fs-l:   16px;
+  --fs-lcd: 18px;
 
-  /* Размеры: исходные значения */
-  --radius:            8px;
-  --radius-s:          6px;
-  --radius-pill:       999px;
-  --topbar-h:          60px;
-  --track-h:           92px;
-  --track-head-w:      248px;
-  --ruler-h:           28px;
-  --beat-px:           28px;
-  --strip-w:           66px;
-  --drawer-h:          300px;
-  --tap:               28px;
-  --gutter:            12px;
-  --tap-step:          26px;
-  --sheet-radius:      16px;
-
-  /* Дополнительные токены */
-  --focus-ring:        #b7ffe8;
-  --metal-line:        #92a6bd;
+  /* --- Размеры -------------------------------------------------------- */
+  --radius:        8px;
+  --radius-s:      6px;
+  --radius-pill:   999px;
+  --topbar-h:      60px;
+  --track-h:       92px;
+  --track-head-w:  248px;
+  --ruler-h:       28px;
+  --beat-px:       28px;
+  --strip-w:       66px;
+  --drawer-h:      300px;  /* нижняя панель трека                       */
+  --tap:           28px;   /* минимальный размер кнопки (на телефоне больше) */
+  --gutter:        12px;   /* поля страницы слева и справа               */
+  --tap-step:      26px;   /* Channel Rack: размер шага                  */
+  --sheet-radius:  16px;
 }
 
+/* --- Телефон: крупнее всё, во что тыкают пальцем -------------------- */
 @media (max-width: 820px) {
   :root {
-    --tap:             40px;
-    --gutter:          8px;
-    --track-h:         80px;
-    --track-head-w:    156px;
-    --ruler-h:         26px;
-    --fs-m:            14px;
-    --tap-step:        44px;
-    --step-inset:      3px;
-    --rack-pad-x:      2px;
-    --mtabs-h:         58px;
+    --tap: 40px;
+    --gutter: 8px;
+    --track-h: 80px;
+    --track-head-w: 156px;
+    --ruler-h: 26px;
+    --fs-m: 14px;
+    --tap-step: 44px;   /* Channel Rack: зона нажатия шага, LED и кнопок панели канала */
+    --step-inset: 3px;  /* отступ видимого квадрата шага внутри зоны нажатия          */
+    --rack-pad-x: 2px;  /* поля Rack по бокам: 8 × --tap-step + 2 × поле ≤ 360 px     */
+    --mtabs-h: 58px;    /* нижний бар режимов (без safe-area)                         */
   }
+}
+
+/* =====================================================================
+   ТЕМА «OBSIDIAN SIGNAL» (палитра предложена gpt-6.1-sol)
+   Только цвета, градиенты, тени — размеры и шрифты общие (иначе сломалась бы мобильная раскладка).
+   --text-faint приглушён до #8a97a9 (5.8:1 на панели) — вторичный текст снова тише основного.
+   ===================================================================== */
+:root[data-theme="obsidian"] {
+  --bg-app: #090c11;
+  --bg-topbar: #131923;
+  --bg-panel: #151c26;
+  --bg-panel-2: #202a38;
+  --bg-panel-3: #2c3747;
+  --bg-inset: #080c12;
+  --bg-lane: #101620;
+  --bg-lane-alt: #0d121b;
+  --bg-head-sel: #223344;
+  --bg-overlay: rgba(3,6,11,.84);
+  --grad-app: radial-gradient(ellipse at 50% 0%, #182334 0%, #090c11 70%);
+  --grad-panel: linear-gradient(180deg, #19222e, #141b25);
+  --grad-topbar: linear-gradient(180deg, #1c2633, #111822);
+  --grad-title: linear-gradient(180deg, #243040, #19222e);
+  --grad-title-active: linear-gradient(180deg, #2a4051, #1c2b3a);
+  --grad-raised: linear-gradient(180deg, #303d4e, #202a38);
+  --grad-raised-hover: linear-gradient(180deg, #3b4a5e, #2a3748);
+  --grad-pressed: linear-gradient(180deg, #0b111a, #19232f);
+  --grad-accent: linear-gradient(180deg, #a4ffe0, #56edbb);
+  --grad-accent-2: linear-gradient(180deg, #ffdc95, #ffc16b);
+  --grad-rec: linear-gradient(180deg, #ffaaa9, #ff7485);
+  --grad-lcd: linear-gradient(180deg, #060a10, #101a24);
+  --grad-strip: linear-gradient(180deg, #1b2532, #111923);
+  --grad-strip-ret: linear-gradient(180deg, #1c2d40, #131e2c);
+  --grad-step: linear-gradient(180deg, #334154, #222d3c);
+  --grad-step-b: linear-gradient(180deg, #423b49, #2e2835);
+  --grad-step-on: linear-gradient(180deg, #a4ffe0, #56edbb);
+  --step-on-glow: 0 0 12px rgba(86,237,187,.3);
+  --knob-cap: radial-gradient(circle at 35% 24%, #647185 0%, #354151 36%, #1d2734 70%, #101721 100%);
+  --fader-cap: linear-gradient(180deg, #e2eaf2 0%, #a6b5c6 44%, #718499 49%, #c4d1de 54%, #8295aa 100%);
+  --fader-groove: #080c12;
+  --shadow-raised: inset 0 1px 0 #ffffff16, 0 2px 4px #00000066;
+  --shadow-pressed: inset 0 2px 5px #000000a6;
+  --shadow-inset: inset 0 2px 4px #00000099;
+  --shadow-panel: inset 0 1px 0 #ffffff0a, 0 8px 28px #00000040;
+  --shadow-window: 0 28px 80px #000000b3, 0 0 0 1px #ffffff14;
+  --shadow-knob: 0 3px 6px #000000b3, inset 0 1px 1px #ffffff33, inset 0 -2px 3px #00000080;
+  --shadow-fader: 0 3px 5px #000000b3, inset 0 1px 0 #ffffff99, 0 0 0 1px #05080d;
+  --glow-accent: 0 0 14px rgba(86,237,187,.25);
+  --glow-accent-2: 0 0 14px rgba(255,193,107,.23);
+  --glow-rec: 0 0 16px rgba(255,116,133,.35);
+  --glow-led: 0 0 8px rgba(123,255,208,.55);
+  --line: #303d4e;
+  --line-soft: #3b495c;
+  --grid-beat: rgba(190,215,245,.055);
+  --grid-bar: rgba(190,215,245,.17);
+  --text: #eff5fc;
+  --text-dim: #c1ccda;
+  --text-faint: #8a97a9;
+  --accent: #56edbb;
+  --accent-hi: #a4ffe0;
+  --accent-soft: rgba(86,237,187,.12);
+  --accent-text: #071b15;
+  --accent-2: #ffc16b;
+  --accent-2-soft: rgba(255,193,107,.12);
+  --accent-2-text: #241706;
+  --led-on: #7bffd0;
+  --led-off: #354254;
+  --rec: #ff7485;
+  --playhead: #e8fff7;
+  --loop: #56edbb;
+  --loop-soft: rgba(86,237,187,.16);
+  --ret: #91caff;
+  --route: #7bffd0;
+  --danger: #ff919c;
+  --meter-lo: #56edbb;
+  --meter-mid: #ffcf76;
+  --meter-hi: #ff7485;
+  --meter-bg: #060a10;
+  --knob-ring: #56edbb;
+  --knob-track: #354254;
+  --knob-send: #91caff;
+  --slider-track: #39485c;
+  --slider-fill: #56edbb;
+  --slider-thumb: #dce8f4;
+  --eq-grid: rgba(190,215,245,.1);
+  --eq-fill: rgba(86,237,187,.14);
+  --eq-band-1: #ff919c;
+  --eq-band-2: #ffc16b;
+  --eq-band-3: #f1e58d;
+  --eq-band-4: #56edbb;
+  --eq-band-5: #78e2e7;
+  --eq-band-6: #91caff;
+  --eq-band-7: #c4acff;
+  --fx-autotune: #56edbb;
+  --fx-vocalchain: #a4ffe0;
+  --fx-shkafx: #c4acff;
+  --fx-eq: #91caff;
+  --fx-reverb: #a8beff;
+  --fx-delay: #78e2e7;
+  --fx-chorus: #ffa5d1;
+  --fx-clipper: #ffc16b;
+  --clip-1: #56edbb;
+  --clip-2: #78e2e7;
+  --clip-3: #c4acff;
+  --clip-4: #ffa5d1;
+  --clip-5: #ffc16b;
+  --clip-6: #91caff;
+  --focus-ring: #b7ffe8;
+  --metal-line: #92a6bd;
 }
 
 </style>
@@ -806,14 +913,20 @@ select { cursor: pointer; }
 .swatch.on { border-color: var(--text); box-shadow: 0 0 0 2px var(--bg-inset) inset; }
 
 /* ------------------------------ КОМПЬЮТЕР: узкие окна ------------------------------ */
+.tb-right > * { flex: none; }
+.tb-left, .tb-right, .tb-info, .transport { min-width: max-content; }
+.transport { flex: none; }
+@media (max-width: 1480px) and (min-width: 821px) { .brand-name { display: none; } }
+@media (max-width: 1320px) and (min-width: 821px) { .tbtn.export { display: none; } }
 @media (max-width: 1280px) and (min-width: 821px) {
-  .brand-name, .tbtn.export { display: none; }
   .topbar { gap: 10px; }
   .master-col { width: 90px; }
   #paneFx { grid-template-columns: 210px minmax(0, 1fr) 260px; }
 }
+@media (max-width: 1200px) and (min-width: 821px) { .master, #sigChip { display: none; } }
+@media (max-width: 1010px) and (min-width: 821px) { #btnSave { display: none; } .proj-btn { max-width: 130px; } }
+@media (max-width: 900px) and (min-width: 821px) { .topbar { gap: 6px; } .tb-right { gap: 6px; } .chip-unit { display: none; } .proj-btn { max-width: 96px; } }
 @media (max-width: 1060px) and (min-width: 821px) {
-  .master, #sigChip { display: none; }
   #paneFx { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   #paneFx .fxp-ch { grid-column: 1 / -1; border-bottom: 1px solid var(--line); flex-direction: row; flex-wrap: wrap; align-items: center; gap: 8px 20px; }
   #paneFx .fxp-ch .fxp-sub { margin: 0; }
@@ -982,82 +1095,96 @@ select { cursor: pointer; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 
-/* ------------------------------ «OBSIDIAN SIGNAL»: правки поверх раскладки ------------------------------
-   Предложены gpt-6.1-sol (ветка feature/chatgpt-redesign). Убрано правило для .clip .c-name: из цвета этой полоски
-   ui.js берёт цвет волны клипа — тёмный фон сделал бы волны невидимыми. */
-.topbar { background: var(--grad-topbar); border-color: var(--line); box-shadow: var(--shadow-panel); color: var(--text); font-family: var(--font-ui); }
-.transport { background: var(--grad-lcd); border-color: var(--line-soft); box-shadow: var(--shadow-inset); }
-.tbtn, .mini, .sq { background: var(--grad-raised); color: var(--text); border-color: var(--line-soft); box-shadow: var(--shadow-raised); text-shadow: none; }
-.tbtn.icon { color: var(--text-dim); }
-.tbtn:hover, .mini:hover, .sq:hover { background: var(--grad-raised-hover); color: var(--text); }
-.tbtn:active, .mini:active, .sq:active { box-shadow: var(--shadow-pressed); }
-.transport .tbtn.play { background: var(--grad-accent); color: var(--accent-text); box-shadow: var(--shadow-raised), var(--glow-accent); }
-.transport .tbtn.play:hover { background: var(--accent-hi); color: var(--accent-text); }
-.transport .tbtn.rec.active { background: var(--grad-rec); color: var(--accent-text); box-shadow: var(--glow-rec); }
-.transport .tbtn.rec.active svg circle { fill: var(--accent-text); }
-.timer { background: var(--grad-lcd); color: var(--accent-hi); box-shadow: var(--shadow-inset); font-variant-numeric: tabular-nums; letter-spacing: -.025em; }
-.chip { background: var(--grad-lcd); border-color: var(--line-soft); color: var(--text); box-shadow: var(--shadow-inset); }
-.chip-unit { color: var(--text-faint); opacity: 1; }
-.master-col { background: var(--grad-strip); border-color: var(--line); }
-.master-meter, .h-meter { background-color: var(--meter-bg); box-shadow: var(--shadow-inset), 0 0 0 1px var(--line); }
-.playlist { background-color: var(--bg-app); color: var(--text); }
-.pl-toolbar { background: var(--grad-panel); border-color: var(--line); }
-.mini.add { background: var(--accent-soft); color: var(--accent-hi); border-color: var(--accent); }
-.head { background: var(--grad-strip); border-color: var(--line); color: var(--text); box-shadow: inset 0 1px 0 #ffffff08; }
-.head.selected { background: var(--grad-title-active); box-shadow: inset 3px 0 var(--accent), inset 0 1px 0 #ffffff12; }
-.h-ico { background: var(--bg-inset); color: var(--accent-hi); box-shadow: var(--shadow-inset); }
-.h-name { color: var(--text); font-weight: 600; letter-spacing: -.015em; }
-.fx-badge { background: var(--bg-inset); color: var(--text-faint); border-color: var(--line-soft); opacity: 1; }
-.fx-badge.on, .fx-pow.on { background: var(--accent-soft); color: var(--accent-hi); border-color: var(--accent); box-shadow: var(--glow-accent); }
-.sq.on { background: var(--grad-accent); color: var(--accent-text); border-color: var(--accent); }
-.sq.solo.on { background: var(--grad-accent-2); color: var(--accent-2-text); border-color: var(--accent-2); }
-.sq.arm.on { background: var(--grad-rec); color: var(--accent-text); border-color: var(--rec); box-shadow: var(--glow-rec); }
-.ruler { background: var(--grad-lcd); color: var(--text-dim); border-color: var(--line); }
-.ruler span.bar { color: var(--text); font-family: var(--font-mono); opacity: 1; }
-.loop-region.on { background: var(--loop-soft); border-color: var(--loop); box-shadow: inset 0 2px var(--loop); }
-.lane { border-color: var(--line); }
-.clip { border-radius: var(--radius-s); box-shadow: inset 0 1px 0 #ffffff40, inset 0 -1px 0 #00000055, 0 2px 5px #00000040; }
-.playhead { background: var(--playhead); box-shadow: 0 0 8px #a4ffe855; }
-.drawer { background: var(--grad-panel); border-color: var(--line-soft); box-shadow: 0 -8px 28px #00000055; color: var(--text); }
-.dr-tab { color: var(--text-dim); }
-.dr-tab.on { color: var(--accent-hi); background: var(--accent-soft); border-color: var(--accent); box-shadow: inset 0 -2px var(--accent); }
-.fx-card { background: var(--grad-panel); border-color: var(--line-soft); box-shadow: var(--shadow-panel); color: var(--text); }
-.route-row.on { background: var(--accent-soft); color: var(--route); }
-.send-row { color: var(--text-dim); border-color: var(--line); }
-.hslider { --slider-fill: var(--accent); background: transparent; }
-.hslider.send { --slider-fill: var(--ret); }
-.hslider::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: linear-gradient(90deg, var(--slider-fill) calc(var(--p) * 100%), var(--slider-track) 0); box-shadow: var(--shadow-inset); }
-.hslider::-moz-range-track { height: 4px; border-radius: 2px; background: var(--slider-track); box-shadow: var(--shadow-inset); }
-.hslider::-moz-range-progress { height: 4px; border-radius: 2px; background: var(--slider-fill); }
-.hslider.send::-webkit-slider-runnable-track { background: linear-gradient(90deg, var(--ret) calc(var(--p) * 100%), var(--slider-track) 0); }
-.hslider.send::-moz-range-progress { background: var(--ret); }
-.hslider.center::-webkit-slider-runnable-track { background: linear-gradient(90deg, transparent calc(50% - 1px), var(--metal-line) 0 calc(50% + 1px), transparent 0), var(--slider-track); }
-.hslider.center::-moz-range-track { background: linear-gradient(90deg, transparent calc(50% - 1px), var(--metal-line) 0 calc(50% + 1px), transparent 0), var(--slider-track); }
-.hslider.center::-moz-range-progress { background: transparent; }
-.hslider::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; margin-top: -5px; border: 0; border-radius: 3px; background: var(--fader-cap); box-shadow: var(--shadow-fader); }
-.hslider::-moz-range-thumb { width: 14px; height: 14px; border: 0; border-radius: 3px; background: var(--fader-cap); box-shadow: var(--shadow-fader); }
-.hslider:hover::-webkit-slider-thumb { box-shadow: var(--shadow-fader), var(--glow-accent); }
-.hslider:hover::-moz-range-thumb { box-shadow: var(--shadow-fader), var(--glow-accent); }
-.knob-dial { background: conic-gradient(from 225deg, var(--knob-ring) calc(var(--p) * 270deg), var(--knob-track) 0 270deg, transparent 0); filter: drop-shadow(0 2px 2px #00000066); }
-.knob-dial::before { background: repeating-conic-gradient(from 0deg, #ffffff05 0deg 2deg, transparent 2deg 6deg), var(--knob-cap); border-color: #080d15; box-shadow: var(--shadow-knob); }
-.knob-dial i { background: var(--accent-hi); box-shadow: 0 0 4px #a4ffe866; transform: rotate(calc(-135deg + var(--p) * 270deg)); }
-.pan-knob { --knob-ring: var(--ret); }
-.step { background: var(--grad-step); border-color: var(--line-soft); box-shadow: var(--shadow-raised); }
-.step.on { background: var(--grad-step-on); color: var(--accent-text); box-shadow: var(--step-on-glow), inset 0 1px 0 #ffffff66; }
-.win, .sheet { background: var(--grad-panel); color: var(--text); border-color: var(--line-soft); box-shadow: var(--shadow-window); font-family: var(--font-ui); }
-.win-title { background: var(--grad-title); color: var(--text); border-color: var(--line); }
-.toast { background: var(--bg-panel-2); color: var(--text); border-color: var(--line-soft); box-shadow: var(--shadow-window); }
-.mtabs button.on { color: var(--accent-hi); background: var(--accent-soft); box-shadow: inset 0 2px var(--accent); }
-.tbtn:focus-visible, .mini:focus-visible, .sq:focus-visible, .hslider:focus-visible, .knob-dial:focus-visible, .dr-tab:focus-visible, .fx-pow:focus-visible, .step:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+/* ------------------------------ НАСТРОЙКИ: выбор темы ------------------------------ */
+.set-label { font-size: var(--fs-xs); font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--text-faint); }
+.theme-list { display: flex; flex-direction: column; gap: 8px; }
+.theme-opt { display: flex; align-items: center; gap: 12px; min-height: max(var(--tap-step), 52px); padding: 8px 12px; text-align: left;
+  border: 1px solid var(--line); border-radius: var(--radius); background: var(--grad-raised); color: var(--text); }
+.theme-opt:hover { background: var(--grad-raised-hover); }
+.theme-opt.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), var(--glow-accent); }
+.theme-sw { display: flex; flex: none; border-radius: 6px; overflow: hidden; box-shadow: 0 0 0 1px var(--line-soft); }
+.theme-sw i { width: 14px; height: 30px; }
+.theme-tx { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.theme-tx b { font-size: var(--fs-m); }
+.theme-tx span { font-size: var(--fs-xs); color: var(--text-dim); }
+.set-note { margin: 0; font-size: var(--fs-xs); color: var(--text-faint); }
+
+/* ------------------------------ ТЕМА «OBSIDIAN SIGNAL»: правки компонентов ------------------------------
+   Предложены gpt-6.1-sol; действуют только при data-theme="obsidian". Без правила для .clip .c-name: из цвета этой полоски
+   ui.js берёт цвет волны клипа. Иконка трека — цвет трека (--c), как в классической теме. */
+:where(:root[data-theme="obsidian"]) .topbar { background: var(--grad-topbar); border-color: var(--line); box-shadow: var(--shadow-panel); color: var(--text); font-family: var(--font-ui); }
+:where(:root[data-theme="obsidian"]) .transport { background: var(--grad-lcd); border-color: var(--line-soft); box-shadow: var(--shadow-inset); }
+:where(:root[data-theme="obsidian"]) .tbtn, :where(:root[data-theme="obsidian"]) .mini, :where(:root[data-theme="obsidian"]) .sq { background: var(--grad-raised); color: var(--text); border-color: var(--line-soft); box-shadow: var(--shadow-raised); text-shadow: none; }
+:where(:root[data-theme="obsidian"]) .tbtn.icon { color: var(--text-dim); }
+:where(:root[data-theme="obsidian"]) .tbtn:hover, :where(:root[data-theme="obsidian"]) .mini:hover, :where(:root[data-theme="obsidian"]) .sq:hover { background: var(--grad-raised-hover); color: var(--text); }
+:where(:root[data-theme="obsidian"]) .tbtn:active, :where(:root[data-theme="obsidian"]) .mini:active, :where(:root[data-theme="obsidian"]) .sq:active { box-shadow: var(--shadow-pressed); }
+:where(:root[data-theme="obsidian"]) .transport .tbtn.play { background: var(--grad-accent); color: var(--accent-text); box-shadow: var(--shadow-raised), var(--glow-accent); }
+:where(:root[data-theme="obsidian"]) .transport .tbtn.play:hover { background: var(--accent-hi); color: var(--accent-text); }
+:where(:root[data-theme="obsidian"]) .transport .tbtn.rec.active { background: var(--grad-rec); color: var(--accent-text); box-shadow: var(--glow-rec); }
+:where(:root[data-theme="obsidian"]) .transport .tbtn.rec.active svg circle { fill: var(--accent-text); }
+:where(:root[data-theme="obsidian"]) .timer { background: var(--grad-lcd); color: var(--accent-hi); box-shadow: var(--shadow-inset); font-variant-numeric: tabular-nums; letter-spacing: -.025em; }
+:where(:root[data-theme="obsidian"]) .chip { background: var(--grad-lcd); border-color: var(--line-soft); color: var(--text); box-shadow: var(--shadow-inset); }
+:where(:root[data-theme="obsidian"]) .chip-unit { color: var(--text-faint); opacity: 1; }
+:where(:root[data-theme="obsidian"]) .master-col { background: var(--grad-strip); border-color: var(--line); }
+:where(:root[data-theme="obsidian"]) .master-meter, :where(:root[data-theme="obsidian"]) .h-meter { background-color: var(--meter-bg); box-shadow: var(--shadow-inset), 0 0 0 1px var(--line); }
+:where(:root[data-theme="obsidian"]) .playlist { background-color: var(--bg-app); color: var(--text); }
+:where(:root[data-theme="obsidian"]) .pl-toolbar { background: var(--grad-panel); border-color: var(--line); }
+:where(:root[data-theme="obsidian"]) .mini.add { background: var(--accent-soft); color: var(--accent-hi); border-color: var(--accent); }
+:where(:root[data-theme="obsidian"]) .head { background: var(--grad-strip); border-color: var(--line); color: var(--text); box-shadow: inset 0 1px 0 #ffffff08; }
+:where(:root[data-theme="obsidian"]) .head.selected { background: var(--grad-title-active); box-shadow: inset 3px 0 var(--accent), inset 0 1px 0 #ffffff12; }
+:where(:root[data-theme="obsidian"]) .h-ico { background: var(--bg-inset); color: var(--c); box-shadow: var(--shadow-inset); }
+:where(:root[data-theme="obsidian"]) .h-name { color: var(--text); font-weight: 600; letter-spacing: -.015em; }
+:where(:root[data-theme="obsidian"]) .fx-badge { background: var(--bg-inset); color: var(--text-faint); border-color: var(--line-soft); opacity: 1; }
+:where(:root[data-theme="obsidian"]) .fx-badge.on, :where(:root[data-theme="obsidian"]) .fx-pow.on { background: var(--accent-soft); color: var(--accent-hi); border-color: var(--accent); box-shadow: var(--glow-accent); }
+:where(:root[data-theme="obsidian"]) .sq.on { background: var(--grad-accent); color: var(--accent-text); border-color: var(--accent); }
+:where(:root[data-theme="obsidian"]) .sq.solo.on { background: var(--grad-accent-2); color: var(--accent-2-text); border-color: var(--accent-2); }
+:where(:root[data-theme="obsidian"]) .sq.arm.on { background: var(--grad-rec); color: var(--accent-text); border-color: var(--rec); box-shadow: var(--glow-rec); }
+:where(:root[data-theme="obsidian"]) .ruler { background: var(--grad-lcd); color: var(--text-dim); border-color: var(--line); }
+:where(:root[data-theme="obsidian"]) .ruler span.bar { color: var(--text); font-family: var(--font-mono); opacity: 1; }
+:where(:root[data-theme="obsidian"]) .loop-region.on { background: var(--loop-soft); border-color: var(--loop); box-shadow: inset 0 2px var(--loop); }
+:where(:root[data-theme="obsidian"]) .lane { border-color: var(--line); }
+:where(:root[data-theme="obsidian"]) .clip { border-radius: var(--radius-s); box-shadow: inset 0 1px 0 #ffffff40, inset 0 -1px 0 #00000055, 0 2px 5px #00000040; }
+:where(:root[data-theme="obsidian"]) .playhead { background: var(--playhead); box-shadow: 0 0 8px #a4ffe855; }
+:where(:root[data-theme="obsidian"]) .drawer { background: var(--grad-panel); border-color: var(--line-soft); box-shadow: 0 -8px 28px #00000055; color: var(--text); }
+:where(:root[data-theme="obsidian"]) .dr-tab { color: var(--text-dim); }
+:where(:root[data-theme="obsidian"]) .dr-tab.on { color: var(--accent-hi); background: var(--accent-soft); border-color: var(--accent); box-shadow: inset 0 -2px var(--accent); }
+:where(:root[data-theme="obsidian"]) .fx-card { background: var(--grad-panel); border-color: var(--line-soft); box-shadow: var(--shadow-panel); color: var(--text); }
+:where(:root[data-theme="obsidian"]) .route-row.on { background: var(--accent-soft); color: var(--route); }
+:where(:root[data-theme="obsidian"]) .send-row { color: var(--text-dim); border-color: var(--line); }
+:where(:root[data-theme="obsidian"]) .hslider { --slider-fill: var(--accent); background: transparent; }
+:where(:root[data-theme="obsidian"]) .hslider.send { --slider-fill: var(--ret); }
+:where(:root[data-theme="obsidian"]) .hslider::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: linear-gradient(90deg, var(--slider-fill) calc(var(--p) * 100%), var(--slider-track) 0); box-shadow: var(--shadow-inset); }
+:where(:root[data-theme="obsidian"]) .hslider::-moz-range-track { height: 4px; border-radius: 2px; background: var(--slider-track); box-shadow: var(--shadow-inset); }
+:where(:root[data-theme="obsidian"]) .hslider::-moz-range-progress { height: 4px; border-radius: 2px; background: var(--slider-fill); }
+:where(:root[data-theme="obsidian"]) .hslider.send::-webkit-slider-runnable-track { background: linear-gradient(90deg, var(--ret) calc(var(--p) * 100%), var(--slider-track) 0); }
+:where(:root[data-theme="obsidian"]) .hslider.send::-moz-range-progress { background: var(--ret); }
+:where(:root[data-theme="obsidian"]) .hslider.center::-webkit-slider-runnable-track { background: linear-gradient(90deg, transparent calc(50% - 1px), var(--metal-line) 0 calc(50% + 1px), transparent 0), var(--slider-track); }
+:where(:root[data-theme="obsidian"]) .hslider.center::-moz-range-track { background: linear-gradient(90deg, transparent calc(50% - 1px), var(--metal-line) 0 calc(50% + 1px), transparent 0), var(--slider-track); }
+:where(:root[data-theme="obsidian"]) .hslider.center::-moz-range-progress { background: transparent; }
+:where(:root[data-theme="obsidian"]) .hslider::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; margin-top: -5px; border: 0; border-radius: 3px; background: var(--fader-cap); box-shadow: var(--shadow-fader); }
+:where(:root[data-theme="obsidian"]) .hslider::-moz-range-thumb { width: 14px; height: 14px; border: 0; border-radius: 3px; background: var(--fader-cap); box-shadow: var(--shadow-fader); }
+:where(:root[data-theme="obsidian"]) .hslider:hover::-webkit-slider-thumb { box-shadow: var(--shadow-fader), var(--glow-accent); }
+:where(:root[data-theme="obsidian"]) .hslider:hover::-moz-range-thumb { box-shadow: var(--shadow-fader), var(--glow-accent); }
+:where(:root[data-theme="obsidian"]) .knob-dial { background: conic-gradient(from 225deg, var(--knob-ring) calc(var(--p) * 270deg), var(--knob-track) 0 270deg, transparent 0); filter: drop-shadow(0 2px 2px #00000066); }
+:where(:root[data-theme="obsidian"]) .knob-dial::before { background: repeating-conic-gradient(from 0deg, #ffffff05 0deg 2deg, transparent 2deg 6deg), var(--knob-cap); border-color: #080d15; box-shadow: var(--shadow-knob); }
+:where(:root[data-theme="obsidian"]) .knob-dial i { background: var(--accent-hi); box-shadow: 0 0 4px #a4ffe866; transform: rotate(calc(-135deg + var(--p) * 270deg)); }
+:where(:root[data-theme="obsidian"]) .pan-knob { --knob-ring: var(--ret); }
+:where(:root[data-theme="obsidian"]) .step { background: var(--grad-step); border-color: var(--line-soft); box-shadow: var(--shadow-raised); }
+:where(:root[data-theme="obsidian"]) .step.on { background: var(--grad-step-on); color: var(--accent-text); box-shadow: var(--step-on-glow), inset 0 1px 0 #ffffff66; }
+:where(:root[data-theme="obsidian"]) .win, :where(:root[data-theme="obsidian"]) .sheet { background: var(--grad-panel); color: var(--text); border-color: var(--line-soft); box-shadow: var(--shadow-window); font-family: var(--font-ui); }
+:where(:root[data-theme="obsidian"]) .win-title { background: var(--grad-title); color: var(--text); border-color: var(--line); }
+:where(:root[data-theme="obsidian"]) .toast { background: var(--bg-panel-2); color: var(--text); border-color: var(--line-soft); box-shadow: var(--shadow-window); }
+:where(:root[data-theme="obsidian"]) .mtabs button.on { color: var(--accent-hi); background: var(--accent-soft); box-shadow: inset 0 2px var(--accent); }
+:where(:root[data-theme="obsidian"]) .tbtn:focus-visible, :where(:root[data-theme="obsidian"]) .mini:focus-visible, :where(:root[data-theme="obsidian"]) .sq:focus-visible, :where(:root[data-theme="obsidian"]) .hslider:focus-visible, :where(:root[data-theme="obsidian"]) .knob-dial:focus-visible, :where(:root[data-theme="obsidian"]) .dr-tab:focus-visible, :where(:root[data-theme="obsidian"]) .fx-pow:focus-visible, :where(:root[data-theme="obsidian"]) .step:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) {
-  .transport .tbtn.rec.active svg circle { animation: none; }
-  .tbtn, .hslider::-webkit-slider-thumb { transition: none; }
-  .hslider::-moz-range-thumb { transition: none; }
+  :where(:root[data-theme="obsidian"]) .transport .tbtn.rec.active svg circle { animation: none; }
+  :where(:root[data-theme="obsidian"]) .tbtn, :where(:root[data-theme="obsidian"]) .hslider::-webkit-slider-thumb { transition: none; }
+  :where(:root[data-theme="obsidian"]) .hslider::-moz-range-thumb { transition: none; }
 }
 
 </style>
 </head>
-<body>
+<body data-theme="classic">
 <div id="app" data-view="tracks">
 
   <!-- ===================== ВЕРХНЯЯ ПАНЕЛЬ ===================== -->
@@ -1076,6 +1203,7 @@ select { cursor: pointer; }
           <button class="menu-item" id="mOpen">Открыть проект… <kbd>Ctrl+O</kbd></button>
           <button class="menu-item" id="mNew">Новый проект</button>
           <button class="menu-item" id="mExport">Экспорт микса в WAV</button>
+          <button class="menu-item" id="mSettings">Настройки…</button>
           <p class="menu-note">Проект сохраняется одним файлом .wok.zip: внутри все записи в WAV и настройки. Последний проект ещё и автоматически хранится в этом браузере.</p>
         </div>
       </div>
@@ -1130,6 +1258,9 @@ select { cursor: pointer; }
       </button>
       <button class="tbtn icon" id="wbBrowser" title="Библиотека: плагины и аудио (F8)" aria-label="Библиотека">
         <svg viewBox="0 0 24 24"><path d="M4 5h4v14H4zM10 5h4v14h-4z"/><path d="m16 6 3.5-1 3 13.5-3.5 1z"/></svg>
+      </button>
+      <button class="tbtn icon" id="btnSettings" title="Настройки: тема оформления" aria-label="Настройки" aria-haspopup="dialog">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
       </button>
       <button class="tbtn save" id="btnSave" title="Сохранить проект (Ctrl+S)">Сохранить</button>
       <button class="tbtn export" id="btnExport" title="Свести в WAV">Экспорт</button>
@@ -5445,6 +5576,55 @@ function voxWorkletModule() {
     }
   });
 
+  /* ------------------------------ ТЕМЫ ОФОРМЛЕНИЯ ------------------------------
+     data-theme на <html> (оттуда JS читает цвета индикаторов и графиков) и на <body>; выбор хранится в localStorage. */
+  const THEMES = {
+    classic: { name: 'BandLab Classic', sub: 'Матовый уголь, изумруд и янтарь', sw: ['#0f1115', '#16181d', '#00c875', '#ff9900'] },
+    obsidian: { name: 'Obsidian Signal', sub: 'Холодный графит и мятный неон', sw: ['#090c11', '#151c26', '#56edbb', '#ffc16b'] }
+  };
+  const THEME_KEY = 'wok-theme';
+  function currentTheme() { const t = document.documentElement.getAttribute('data-theme'); return THEMES[t] ? t : 'classic'; }
+  function applyTheme(t) {
+    if (!THEMES[t]) t = 'classic';
+    document.documentElement.setAttribute('data-theme', t); document.body.setAttribute('data-theme', t);
+    Object.keys(meterColors).forEach((k) => delete meterColors[k]); // индикаторы перечитают цвета
+    renderPlaylist(); // волны клипов перерисуются цветом новой темы
+  }
+  function setTheme(t) {
+    applyTheme(t);
+    try { localStorage.setItem(THEME_KEY, t); } catch (e) {}
+    Vox.hint('Тема оформления: ' + THEMES[currentTheme()].name);
+  }
+  function openSettings() {
+    setMenu(false);
+    openSheet('Настройки', 'WOK Studio', (sh) => {
+      const box = el('div', 'sheet-ctl');
+      box.appendChild(el('div', 'set-label', 'Тема оформления'));
+      const list = el('div', 'theme-list'); list.setAttribute('role', 'radiogroup'); list.setAttribute('aria-label', 'Тема оформления');
+      let first = null;
+      Object.entries(THEMES).forEach(([id, th]) => {
+        const b = el('button', 'theme-opt'); b.dataset.theme = id; b.setAttribute('role', 'radio');
+        const sw = el('span', 'theme-sw'); th.sw.forEach((c) => { const i = el('i'); i.style.background = c; sw.appendChild(i); });
+        const tx = el('span', 'theme-tx'); tx.append(el('b', '', th.name), el('span', '', th.sub));
+        b.append(sw, tx);
+        const sync = () => list.querySelectorAll('.theme-opt').forEach((x) => { const on = x.dataset.theme === currentTheme(); x.classList.toggle('on', on); x.setAttribute('aria-checked', String(on)); x.tabIndex = on ? 0 : -1; });
+        b.onclick = () => { setTheme(id); sync(); };
+        b.onkeydown = (e) => {
+          if (!['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight'].includes(e.key)) return;
+          e.preventDefault(); const ids = Object.keys(THEMES), n = (ids.indexOf(id) + (e.key === 'ArrowDown' || e.key === 'ArrowRight' ? 1 : ids.length - 1)) % ids.length;
+          setTheme(ids[n]); sync(); list.querySelector('[data-theme="' + ids[n] + '"]').focus();
+        };
+        list.appendChild(b); if (!first) first = b; sync();
+      });
+      box.appendChild(list);
+      box.appendChild(el('p', 'set-note', 'Тема меняется сразу и запоминается в этом браузере.'));
+      sh.appendChild(box);
+      return list.querySelector('.theme-opt.on') || first;
+    });
+  }
+  $('btnSettings').onclick = openSettings;
+  $('mSettings').onclick = openSettings;
+
   /* ------------------------------ ЗАПУСК ------------------------------ */
   document.addEventListener('pointerdown', () => { Vox.resume().catch(() => {}); }, { once: true, capture: true });
   Vox.on('ready', () => {
@@ -5454,6 +5634,9 @@ function voxWorkletModule() {
   });
 
   $('projName').textContent = st.projectName;
+  let savedTheme = null; try { savedTheme = localStorage.getItem(THEME_KEY); } catch (e) {}
+  document.body.setAttribute('data-theme', THEMES[savedTheme] ? savedTheme : currentTheme());
+  document.documentElement.setAttribute('data-theme', document.body.getAttribute('data-theme'));
   syncKey(); syncMaster(); syncLibraryBtn();
   renderBrowser(); renderPlaylist(); syncTransport(); syncRecPane();
   buildRack($('paneBeat')); openDrawer('fx');
