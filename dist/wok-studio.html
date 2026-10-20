@@ -1314,6 +1314,13 @@ function voxWorkletModule() {
      паузах/согласных (без скачка к 1), даже при Retune 0 есть сглаживание ~1 мс, период — медиана из 3,
      на выходе — фильтр постоянной составляющей. */
   const RANGE_FMIN = { low: 75, mid: 100, high: 150 };
+  // ядро Ланцоша (a = 4) для дробного чтения кусков голоса
+  function lanczos4(d) {
+    if (Math.abs(d) < 1e-9) return 1;
+    if (Math.abs(d) >= 4) return 0;
+    const pd = Math.PI * d;
+    return 4 * Math.sin(pd) * Math.sin(pd / 4) / (pd * pd);
+  }
   const HIST = 512, HMASK = HIST - 1;
   class VoxAutoTune extends AudioWorkletProcessor {
     constructor(opts) {
@@ -1526,7 +1533,16 @@ function voxWorkletModule() {
         const lo = Math.max(-R, best - cs), hi = Math.min(R, best + cs), jf = Math.max(1, Math.round(T / 96));
         bc = -2;
         for (let d = lo; d <= hi; d++) { const c = corr(d, jf); if (c > bc) { bc = c; best = d; } }
-        if (bc > 0.3) at = pos + best;
+        if (bc > 0.3) {
+          // Доводка до долей сэмпла: вершина параболы через соседние значения корреляции. Метку ставим от прошлой
+          // на найденное расстояние между совпадающими местами волны (p0 + best + frac − q0). Раньше шаг меток
+          // сводился к целому числу сэмплов (at = pos + best), фаза кусков отставала и тон уходил вниз на
+          // 1200·log2(round(T)/T) центов (до −6 ц при T ≈ 104).
+          let frac = 0;
+          const c0 = corr(best - 1, 1), c1 = corr(best, 1), c2 = corr(best + 1, 1), den = c0 - 2 * c1 + c2;
+          if (den < -1e-9) frac = Math.max(-0.5, Math.min(0.5, 0.5 * (c0 - c2) / den));
+          at = pm + (p0 - q0) + best + frac;
+        }
       }
       const i = this.mHead;
       this.mPos[i] = at; this.mT[i] = T; this.mV[i] = h.v; this.mC[i] = h.c;
@@ -1539,7 +1555,7 @@ function voxWorkletModule() {
       let best = -1, bd = 1e18;
       for (let k = 0; k < this.mCount; k++) {
         const i = (this.mHead - 1 - k) & 255, a = this.mPos[i];
-        if (a + this.Tmax > this.n) continue; // кусок (до Tmax в каждую сторону) уже целиком записан
+        if (a + this.Tmax + 5 > this.n) continue; // кусок (до Tmax в каждую сторону + 4 точки интерполяции) уже записан
         const dd = Math.abs(a - this.syn);
         if (dd < bd) { bd = dd; best = i; }
         else if (a < this.syn) break;
@@ -1552,14 +1568,22 @@ function voxWorkletModule() {
       // перестали бы перекрываться. Длиннее без нужды нельзя — захватываются соседние периоды и появляется гребёнка.
       // Не длиннее Tmax: иначе кусок не успевает целиком попасть в ещё не выведенную часть буфера.
       const half = Math.max(16, Math.round(Math.min(this.Tmax, Math.max(T, 0.6 * hop)))), mask = this.mask;
-      const ai = Math.round(a), si = Math.round(this.syn) + this.L;
-      const k = Math.PI / half;
-      // кусок голоса с окном Ханна; сумму окон копим отдельно и делим на неё на выходе —
-      // так громкость не «дышит» и нет щелчков, когда шаг кусков меняется
-      for (let j = -half; j < half; j++) {
-        const w = 0.5 + 0.5 * Math.cos(k * j), idx = (si + j) & mask;
-        this.y[idx] += this.x[(ai + j) & mask] * w;
-        this.ws[idx] += w;
+      const k = Math.PI / half, x = this.x, y = this.y, ws = this.ws;
+      // Кусок ставится с точностью до долей сэмпла: центр на выходе s0 = syn + L (дробный), вход читается в точке
+      // u = o + (a − s0) через 8-точечную интерполяцию Ланцоша (доля u одна на весь кусок — веса считаем один раз).
+      // С округлением центров (как раньше) фаза кусков дрожала на ±0.5 сэмпла — лишние искажения на чистом тоне.
+      const s0 = this.syn + this.L, off = a - s0, o0 = Math.ceil(s0 - half), u0 = o0 + off, i0 = Math.floor(u0), fr = u0 - i0;
+      const lw = this.lzW || (this.lzW = new Float64Array(8));
+      let sum = 0;
+      for (let m = 0; m < 8; m++) { lw[m] = lanczos4(fr - (m - 3)); sum += lw[m]; }
+      for (let m = 0; m < 8; m++) lw[m] /= sum;
+      // сумму окон копим отдельно и делим на неё на выходе — громкость не «дышит», когда шаг кусков меняется
+      for (let o = o0, i = i0; o - s0 < half; o++, i++) {
+        const w = 0.5 + 0.5 * Math.cos(k * (o - s0)), idx = o & mask;
+        let v = 0;
+        for (let m = 0; m < 8; m++) v += x[(i + m - 3) & mask] * lw[m];
+        y[idx] += v * w;
+        ws[idx] += w;
       }
       this.syn += hop;
     }
