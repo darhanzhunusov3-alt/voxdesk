@@ -99,7 +99,8 @@
 `masterVol`, `masterMeter`, `btnMetro`, `wbBrowser`, `btnSave`, `btnExport`, `workspace`, `browser`, `brPlugins`, `brAudio`, `fileImport`,
 `playlist`, `addTrack`, `splitBtn`, `dupBtn`, `delBtn`, `btnPattern`, `zoomOut`, `zoomIn`, `plHeads`, `plScroll`, `plContent`, `ruler`,
 `lanes`, `loopRegion`, `playhead`, `drawer`, `drChannel`, `drClose`, `paneFx`, `paneBeat`, `paneRec`, `recBig`, `recTrack`, `micMeter`,
-`btnMonitor`, `latencyMs`, `audioInfo`, `hint`, `windows`, `mtabs`, `btnSettings`, `mSettings`.
+`btnMonitor`, `latencyMs`, `audioInfo`, `hint`, `windows`, `mtabs`, `btnSettings`, `mSettings`, `importBtn`, `audioPick` (поле выбора файлов — класс `.vh-file`,
+не прятать через `display: none`: на iOS тогда не откроется выбор файлов).
 
 **Атрибуты-переключатели:** `data-pane` у `#drawer` и у кнопок `.dr-tab` (fx / beat / rec) — какая вкладка нижней панели открыта;
 `data-view` у `#app` и у кнопок в `#mtabs` (tracks / fx / beat / rec) — режим на телефоне.
@@ -121,6 +122,7 @@
 - эффекты трека: `.fxp-ch`, `.fxp-name`, `.fxp-sub`, `.fxp-row`, `.fxp-db`, `.fxp-meter`, `.fxp-chain`, `.fxp-title`, `.fxp-hint`, `.fxp-note`,
   карточки `.fx-cards`, `.fx-card`, `.fx-card.bypass`, `.fx-card.add` (цвет полоски — `--fxc`), `.fx-pow`, `.fx-pow.on`, `.fx-open`, `.fx-num`, `.fx-name`, `.fx-sub`, `.fx-rm`
 - посылы и маршрут: `.fxp-sends`, `.route-row`, `.route-row.on`, `.rr-led`, `.send-row`, `.send-row.ret`, `.sr-name` (кнопка: имя + `.sr-gear`, открывает эффект канала), `.sr-db`, `.sr-rm`, `.send-add`
+- импорт: `.ib-long` / `.ib-short` (длинная и короткая подпись кнопки импорта), `.lane.pickable` (пустая дорожка «Бит» — тап открывает выбор файла), `.lane-empty.pick`
 - тост: `.toast`, `.toast.show` (короткое уведомление снизу по центру, например об автокее)
 - запись: `.rec-pane`, `.rec-main`, `.rec-big`, `.rec-big.active`, `.rec-info`, `.rec-field`, `.rec-settings`
 - Channel Rack: `.rack`, `.rack-row`, `.r-name`, `.steps`, `.step`, `.step.b`, `.step.on`, `.step.now`
@@ -152,6 +154,9 @@
 - `--eq-grid`, `--eq-fill`, `--eq-band-1` … `--eq-band-7` — сетка, заливка и точки полос EQ.
 
 ## Телефон
+
+Безопасные зоны (вырез, Dynamic Island, статус-бар, полоска жестов) — только через токены `--safe-top`, `--safe-right`, `--safe-bottom`, `--safe-left`,
+`--safe-bar` из `theme.css`, не через `env(safe-area-inset-*)` напрямую: на Android в приложении `env()` равен 0, а настоящие значения приходят в переменных Capacitor.
 
 Ниже 820 px студия переходит в мобильный режим (см. `@media (max-width: 820px)` в `app.css` и `theme.css`):
 внизу лаконичный бар режимов `#mtabs` (Треки / Эффекты / Бит / Запись; активная кнопка — `.on`), один режим на экране.

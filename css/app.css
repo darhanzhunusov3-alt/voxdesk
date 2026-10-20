@@ -10,7 +10,7 @@ body {
   -webkit-font-smoothing: antialiased; overflow: hidden;
 }
 body::before {
-  content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px);
+  content: ""; position: fixed; inset: 0 0 auto; height: var(--safe-top);
   z-index: 10; background: var(--bg-topbar);
 }
 * { box-sizing: border-box; }
@@ -23,7 +23,6 @@ svg { flex: none; }
 
 #app {
   height: 100%; display: flex; flex-direction: column;
-  padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px);
 }
 
 /* ------------------------------ ОБЩИЕ ЭЛЕМЕНТЫ ------------------------------ */
@@ -76,8 +75,9 @@ select { cursor: pointer; }
 
 /* ------------------------------ ВЕРХНЯЯ ПАНЕЛЬ ------------------------------ */
 .topbar {
-  flex: none; position: relative; z-index: 20; height: var(--topbar-h); display: flex; align-items: center; gap: 14px;
-  padding: 0 var(--gutter); background: var(--grad-topbar); border-bottom: 1px solid var(--line);
+  flex: none; position: relative; z-index: 20; height: calc(var(--topbar-h) + var(--safe-top)); display: flex; align-items: center; gap: 14px;
+  padding: var(--safe-top) max(var(--gutter), var(--safe-right)) 0 max(var(--gutter), var(--safe-left));
+  background: var(--grad-topbar); border-bottom: 1px solid var(--line);
 }
 .tb-group { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .tb-left { flex: 1 1 0; }
@@ -162,7 +162,7 @@ select { cursor: pointer; }
 
 /* строка подсказок */
 .hintbar {
-  flex: none; height: 26px; line-height: 26px; padding: 0 var(--gutter);
+  flex: none; height: 26px; line-height: 26px; padding: 0 max(var(--gutter), var(--safe-right)) 0 max(var(--gutter), var(--safe-left));
   font-size: var(--fs-s); color: var(--text-faint); background: var(--bg-app); border-top: 1px solid var(--line);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
@@ -171,7 +171,8 @@ select { cursor: pointer; }
 .hint-actions { display: inline-flex; gap: 6px; margin-left: 12px; }
 .hint-actions button { height: 26px; padding: 0 12px; font-size: var(--fs-s); border-radius: var(--radius-pill); font-weight: 600; }
 .hint-actions button.primary, .modal .m-btns button.primary { background: var(--grad-accent); color: var(--accent-text); border-color: transparent; }
-.modal-back { position: fixed; inset: 0; z-index: 120; background: var(--bg-overlay); display: grid; place-items: center; padding: 16px; }
+.modal-back { position: fixed; inset: 0; z-index: 120; background: var(--bg-overlay); display: grid; place-items: center;
+  padding: max(16px, var(--safe-top)) max(16px, var(--safe-right)) max(16px, var(--safe-bottom)) max(16px, var(--safe-left)); }
 .modal { width: min(400px, 100%); padding: 20px; display: flex; flex-direction: column; gap: 16px;
   background: var(--bg-panel-2); border: 1px solid var(--line-soft); border-radius: 14px; box-shadow: var(--shadow-window); }
 .modal p { margin: 0; line-height: 1.5; }
@@ -180,7 +181,8 @@ select { cursor: pointer; }
 
 /* ------------------------------ РАБОЧАЯ ОБЛАСТЬ ------------------------------ */
 .workspace {
-  position: relative; flex: 1; min-height: 0; padding: var(--gutter);
+  position: relative; flex: 1; min-height: 0;
+  padding: var(--gutter) max(var(--gutter), var(--safe-right)) var(--gutter) max(var(--gutter), var(--safe-left));
   display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: var(--gutter);
 }
 .workspace.no-browser { grid-template-columns: minmax(0, 1fr); }
@@ -223,6 +225,8 @@ select { cursor: pointer; }
   background: var(--bg-panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; box-shadow: var(--shadow-panel);
 }
 .pl-toolbar { flex: none; min-height: 44px; display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-bottom: 1px solid var(--line); }
+.pl-toolbar > .mini { flex: none; }
+.ib-short { display: none; }
 .pl-tools { display: flex; gap: 6px; flex-wrap: wrap; min-width: 0; }
 .pl-zoom { margin-left: auto; display: flex; gap: 4px; }
 .mini {
@@ -347,6 +351,11 @@ select { cursor: pointer; }
   background: repeating-linear-gradient(90deg, color-mix(in srgb, var(--clip-5) 26%, var(--bg-lane)) 0 calc(var(--beat-px) * 4 - 2px), transparent calc(var(--beat-px) * 4 - 2px) calc(var(--beat-px) * 4));
   font-size: 10px; font-weight: 600; color: var(--clip-5); padding-left: 8px; line-height: 28px; white-space: nowrap; overflow: hidden;
 }
+.lane.pickable { cursor: pointer; }
+.lane.pickable:hover { background-color: color-mix(in srgb, var(--c) 6%, var(--bg-lane)); }
+.lane-empty.pick { color: var(--c); font-weight: 600; opacity: .8; }
+/* поле выбора файла: в DOM и «видимо» для браузера (click() работает на iOS), но не на экране */
+.vh-file { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); border: 0; opacity: 0; pointer-events: none; }
 .lane-empty {
   position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: var(--fs-s); color: var(--text-faint);
   pointer-events: none; white-space: nowrap;
@@ -477,7 +486,8 @@ select { cursor: pointer; }
 
 /* ------------------------------ ОКНА ПЛАГИНОВ: модальные ------------------------------ */
 .windows-layer {
-  position: fixed; inset: 0; z-index: 70; display: flex; align-items: center; justify-content: center; padding: 24px;
+  position: fixed; inset: 0; z-index: 70; display: flex; align-items: center; justify-content: center;
+  padding: max(24px, var(--safe-top)) max(24px, var(--safe-right)) max(24px, var(--safe-bottom)) max(24px, var(--safe-left));
   pointer-events: none; transition: background .15s;
 }
 .windows-layer.open { pointer-events: auto; background: var(--bg-overlay); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
@@ -643,9 +653,10 @@ select { cursor: pointer; }
    заголовки треков компактные: громкость и панорама — в шторке трека (тап по имени или ⋯). */
 .mtabs { display: none; }
 @media (max-width: 820px) {
-  #app { padding-bottom: calc(var(--mtabs-h) + env(safe-area-inset-bottom, 0px)); }
+  #app { padding-bottom: calc(var(--mtabs-h) + var(--safe-bar)); }
   /* верхняя панель — одна строка с прокруткой вбок, транспорт первым */
-  .topbar { height: auto; min-height: 56px; gap: 8px; padding: 6px 8px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+  .topbar { height: auto; min-height: 56px; gap: 8px; overflow-x: auto;
+    padding: max(10px, var(--safe-top)) max(8px, var(--safe-right)) 6px max(8px, var(--safe-left)); overflow-y: hidden; scrollbar-width: none; }
   .topbar::-webkit-scrollbar { display: none; }
   .topbar > * { flex: none; }
   .tb-left, .tb-right { flex: none; }
@@ -657,15 +668,15 @@ select { cursor: pointer; }
   .transport .tbtn.play { width: 44px; height: 44px; }
   .timer { min-width: 74px; padding: 0 8px; font-size: 16px; }
   .chip { height: 36px; }
-  .menu { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 64px); left: 12px; right: 12px; width: auto; }
-  .hintbar { height: 24px; line-height: 24px; font-size: var(--fs-xs); padding-inline: 10px; }
-  .toast { bottom: calc(var(--mtabs-h) + env(safe-area-inset-bottom, 0px) + 34px); }
+  .menu { position: fixed; top: calc(max(10px, var(--safe-top)) + 56px); left: 12px; right: 12px; width: auto; }
+  .hintbar { height: 24px; line-height: 24px; font-size: var(--fs-xs); padding-inline: max(10px, var(--safe-left)) max(10px, var(--safe-right)); }
+  .toast { bottom: calc(var(--mtabs-h) + var(--safe-bar) + 34px); }
   .at-ref-box { min-width: 0; flex-wrap: wrap; }
   .at-ref-box .hslider { width: 100%; height: 40px; }
   .h-ico.h-grip { width: 30px; height: 30px; margin: -5px 0 -5px -4px; }
   .hintbar.restore { line-height: 18px; }
 
-  .workspace { display: block; padding: 0; }
+  .workspace { display: block; padding: 0 var(--safe-right) 0 var(--safe-left); }
   .studio { height: 100%; gap: 0; }
   .browser { position: absolute; inset: 0; z-index: 30; border-radius: 0; border: 0; }
   .playlist, .drawer { border-radius: 0; border-left: 0; border-right: 0; box-shadow: none; }
@@ -685,6 +696,8 @@ select { cursor: pointer; }
   .pl-tools::-webkit-scrollbar { display: none; }
   .pl-tools > * { flex: none; }
   .mini { height: 34px; min-width: 34px; }
+  .ib-long { display: none; }
+  .ib-short { display: inline; }
   .head { gap: 8px; padding: 8px 6px 8px 12px; }
   .h-top { gap: 5px; }
   .h-ico { width: 20px; height: 20px; }
@@ -728,8 +741,8 @@ select { cursor: pointer; }
   .rec-settings { max-width: none; }
 
   /* окна плагинов — на весь экран */
-  .windows-layer { padding: env(safe-area-inset-top, 0px) 0 0; }
-  .windows-layer.open { backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .windows-layer { padding: max(10px, var(--safe-top)) var(--safe-right) var(--safe-bottom) var(--safe-left); }
+  .windows-layer.open { backdrop-filter: none; -webkit-backdrop-filter: none; background: var(--bg-panel); }
   .win { width: 100% !important; height: 100% !important; border-radius: 0; border: 0; animation-name: sheet-up; }
   .win-title { height: 48px; }
   .w-close { width: 44px; height: 44px; }
@@ -743,7 +756,7 @@ select { cursor: pointer; }
   /* шторка — снизу */
   .sheet-back { align-items: flex-end; padding: 0; }
   .sheet { max-width: 520px; max-height: min(78vh, 560px); border-bottom: 0; border-radius: var(--sheet-radius) var(--sheet-radius) 0 0;
-    padding: 20px max(14px, env(safe-area-inset-right, 0px)) calc(14px + env(safe-area-inset-bottom, 0px)) max(14px, env(safe-area-inset-left, 0px)); }
+    padding: 20px max(14px, var(--safe-right)) calc(14px + var(--safe-bottom)) max(14px, var(--safe-left)); }
   .sheet-grip { display: block; position: absolute; top: 7px; left: 50%; width: 36px; height: 4px; margin-left: -18px; border-radius: 2px; background: var(--line-soft); }
   .sheet-row { grid-template-columns: 92px minmax(0, 1fr); }
   .swatches { gap: 6px; }
@@ -783,11 +796,11 @@ select { cursor: pointer; }
 
   /* ---------- нижний бар режимов ---------- */
   .mtabs {
-    display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; height: calc(var(--mtabs-h) + env(safe-area-inset-bottom, 0px));
-    padding: 0 env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+    display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; height: calc(var(--mtabs-h) + var(--safe-bar));
+    padding: 0 var(--safe-right) var(--safe-bar) var(--safe-left);
     background: var(--bg-panel); border-top: 1px solid var(--line);
   }
-  .mtabs button { position: relative; flex: 1; min-width: 0; height: var(--mtabs-h); padding: 0; border: 0; background: none;
+  .mtabs button { position: relative; flex: 1; min-width: 0; height: calc(var(--mtabs-h) - 1px); padding: 0; border: 0; background: none;
     color: var(--text-faint); font-weight: 600; font-size: 11px; -webkit-tap-highlight-color: transparent;
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; transition: color .12s; }
   .mtabs button svg { width: 22px; height: 22px; stroke-width: 1.8; }

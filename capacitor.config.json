@@ -1,5 +1,11 @@
 {
   "appId": "com.voxdesk.app",
   "appName": "VoxDesk",
-  "webDir": "dist"
+  "webDir": "dist",
+  "plugins": {
+    "SystemBars": {
+      "style": "DARK",
+      "insetsHandling": "css"
+    }
+  }
 }

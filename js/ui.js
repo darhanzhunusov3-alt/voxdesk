@@ -317,7 +317,13 @@
 
       // дорожка
       const lane = el('div', 'lane'); lane.dataset.track = ti; lane.style.setProperty('--c', 'var(--clip-' + tr.color + ')');
-      if (!tr.clips.length && ti === 0) lane.appendChild(el('div', 'lane-empty', 'Перетащи сюда WAV/MP3 или нажми ● и запись'));
+      if (!tr.clips.length && isBeatTrack(tr)) {
+        lane.appendChild(el('div', 'lane-empty pick', 'Нажми, чтобы загрузить бит (или перетащи файл сюда)'));
+        lane.classList.add('pickable'); lane.title = 'Загрузить бит из файлов устройства';
+        let down = null;
+        lane.addEventListener('pointerdown', (e) => { down = e.target === lane ? { x: e.clientX, y: e.clientY } : null; });
+        lane.addEventListener('click', (e) => { if (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 8) { selectTrack(ti); pickAudio(ti, 0); } down = null; });
+      } else if (!tr.clips.length && ti === 0) lane.appendChild(el('div', 'lane-empty', 'Перетащи сюда WAV/MP3, нажми «Импорт аудио» или ● и запись'));
       tr.clips.forEach((c) => lane.appendChild(renderClip(c, tr, ti)));
       lane.addEventListener('dragover', (e) => { e.preventDefault(); lane.classList.add('drop'); });
       lane.addEventListener('dragleave', () => lane.classList.remove('drop'));
@@ -591,6 +597,35 @@
   heads.addEventListener('wheel', (e) => { scroller.scrollTop += e.deltaY; }, { passive: true });
   Vox.on('tracks', () => { renderPlaylist(); renderBrowser(); syncRecPane(); });
 
+  /* ------------------------------ ИМПОРТ АУДИО через системный выбор файлов ------------------------------
+     Файл декодируется так же, как при перетаскивании (Vox.importFile → decodeAudioData); бит запускает автокей. */
+  const audioPick = $('audioPick');
+  let pickTarget = null;
+  function pickAudio(ti, beat) {
+    pickTarget = { ti, beat };
+    audioPick.value = '';
+    audioPick.click();
+  }
+  audioPick.addEventListener('change', async () => {
+    const files = [...audioPick.files], t = pickTarget || { ti: st.selectedTrack, beat: Math.floor(st.posBeats) };
+    pickTarget = null; audioPick.value = '';
+    if (!files.length || !st.tracks[t.ti]) return;
+    Vox.hint('Загружаю ' + files.map((f) => f.name).join(', ') + '…');
+    let beat = t.beat;
+    for (const f of files) {
+      const n = st.tracks[t.ti].clips.length;
+      await Vox.importFile(f, t.ti, beat);
+      const tr = st.tracks[t.ti];
+      if (tr.clips.length > n) { const c = tr.clips[tr.clips.length - 1]; beat = c.startBeat + Math.ceil(c.dur / (60 / st.bpm)); } // следующий файл — следом
+    }
+    selectTrack(t.ti);
+  });
+  // кнопка «Импорт аудио»: на выбранный трек; бит (трек «Бит») в пустую дорожку — с начала песни
+  $('importBtn').onclick = () => {
+    const ti = st.selectedTrack, tr = st.tracks[ti];
+    pickAudio(ti, tr && !tr.clips.length ? 0 : Math.floor(st.posBeats));
+  };
+
   /* ------------------------------ ШТОРКА (bottom sheet) ------------------------------
      На телефоне — снизу, на компьютере — диалог по центру. Одна за раз. */
   let sheet = null;
@@ -662,7 +697,9 @@
       upB.disabled = ti === 0; dnB.disabled = ti === st.tracks.length - 1;
       upB.onclick = () => { moveTrack(ti, ti - 1); openTrackSheet(ti - 1); };
       dnB.onclick = () => { moveTrack(ti, ti + 1); openTrackSheet(ti + 1); };
-      order.append(upB, dnB);
+      const imp = el('button', 'sheet-btn', 'Загрузить аудио'); imp.title = 'Выбрать файл на устройстве и поставить на этот трек';
+      imp.onclick = () => { closeSheet(); pickAudio(ti, tr.clips.length ? Math.floor(st.posBeats) : 0); };
+      order.classList.add('three'); order.append(upB, dnB, imp);
       sh.append(ctl, order, acts);
       return fx;
     });

@@ -2,7 +2,7 @@
 <html lang="ru" data-theme="classic">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>WOK Studio</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2316181d'/%3E%3Cpath d='M6 10l4 13 4-9 4 9 4-13' fill='none' stroke='%2300c875' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='26' cy='10' r='2.5' fill='%23ff9900'/%3E%3C/svg%3E">
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -121,6 +121,9 @@
       <section class="playlist" id="playlist">
         <div class="pl-toolbar">
           <button class="mini add" id="addTrack" title="Новая дорожка">+ Трек</button>
+          <button class="mini" id="importBtn" title="Импорт аудио: WAV, MP3, M4A, FLAC — на выбранный трек (бит — на трек «Бит»)" aria-label="Импорт аудио">⤓ <span class="ib-long">Импорт аудио</span><span class="ib-short">Аудио</span></button>
+          <!-- системный выбор файлов (Файлы на iOS, Документы на Android); спрятан визуально, не display:none — иначе старые iOS не открывают его по click() -->
+          <input type="file" id="audioPick" class="vh-file" accept="audio/*" multiple tabindex="-1" aria-hidden="true">
           <div class="pl-tools">
             <button class="mini" id="splitBtn" title="Разрезать клип по курсору (S)">✂ Разрезать</button>
             <button class="mini" id="dupBtn" title="Дублировать выбранный клип или дорожку (Ctrl+D)">⧉ Дублировать</button>

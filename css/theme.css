@@ -154,6 +154,15 @@
   --gutter:        12px;   /* поля страницы слева и справа               */
   --tap-step:      26px;   /* Channel Rack: размер шага                  */
   --sheet-radius:  16px;
+
+  /* --- Безопасные зоны (вырез, Dynamic Island, статус-бар, полоска жестов) ---
+     Android (Capacitor 8, SystemBars): реальные значения — в --safe-area-inset-*, env() там 0;
+     iOS и браузеры: env(safe-area-inset-*) при viewport-fit=cover. */
+  --safe-top:    var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+  --safe-right:  var(--safe-area-inset-right, env(safe-area-inset-right, 0px));
+  --safe-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+  --safe-left:   var(--safe-area-inset-left, env(safe-area-inset-left, 0px));
+  --safe-bar:    max(6px, var(--safe-bottom));  /* отступ под полоской жестов iOS (Home Indicator) у нижнего бара */
 }
 
 /* --- Телефон: крупнее всё, во что тыкают пальцем -------------------- */
