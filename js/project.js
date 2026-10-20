@@ -10,7 +10,8 @@
   // то, что входит в проект и в историю отмены (без позиции курсора, выделения и т. п.)
   function snapObj() {
     return {
-      projectName: st.projectName, bpm: st.bpm, patternInSong: st.patternInSong,
+      projectName: st.projectName, bpm: st.bpm, patternInSong: st.patternInSong, key: st.key,
+      loop: { start: st.loop.start, end: st.loop.end },
       tracks: st.tracks.map((t) => { const o = Object.assign({}, t); delete o.armed; return o; }),
       mixer: st.mixer, rack: st.rack
     };
@@ -26,6 +27,10 @@
     st.projectName = copy.projectName || 'WOK Studio';
     st.bpm = copy.bpm || 140;
     st.patternInSong = copy.patternInSong !== false;
+    // тональность: из проекта, у старых проектов — из первого автотюна
+    const at = copy.mixer.reduce((a, ch) => a || ch.fx.find((s) => s && s.type === 'autotune'), null);
+    st.key = copy.key || (at ? { root: at.params.key, scale: at.params.scale } : { root: 6, scale: 'minor' });
+    if (copy.loop) Object.assign(st.loop, { start: copy.loop.start, end: copy.loop.end });
     st.tracks = copy.tracks.map((t, i) => Object.assign(t, { armed: i === (armedIdx >= 0 ? armedIdx : 0) && armedIdx >= 0 }));
     st.mixer = copy.mixer;
     st.rack = copy.rack;

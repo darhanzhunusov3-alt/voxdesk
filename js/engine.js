@@ -245,8 +245,9 @@
   const vcNodes = new Set();
   // темп и позиция песни для PanMan, delay и «карусели» внутри VocalChain
   Vox.transportFor = (ctx) => (ctx === Vox.ctx
-    ? { playing: !!Vox.state.playing, t0: Vox.t0 || 0, startBeat: Vox.startBeat || 0, bpm: Vox.state.bpm }
-    : { playing: true, t0: Vox.offlineT0 || 0, startBeat: 0, bpm: Vox.state.bpm });
+    ? { playing: !!Vox.state.playing, t0: Vox.t0 || 0, startBeat: Vox.startBeat || 0, bpm: Vox.state.bpm,
+        loopA: Vox.loopRun ? Vox.loopRun.start : 0, loopB: Vox.loopRun ? Vox.loopRun.end : 0 }
+    : { playing: true, t0: Vox.offlineT0 || 0, startBeat: 0, bpm: Vox.state.bpm, loopA: 0, loopB: 0 });
   function broadcastTransport() {
     if (!Vox.live) return;
     Vox.live.forEach((n) => n && n.fx.forEach((f) => f && (f.isVC || f.wantsTransport) && f.node.port.postMessage({ transport: Object.assign(Vox.transportFor(Vox.ctx), { ahead: f.ahead }) })));
@@ -542,6 +543,8 @@
     projectName: 'WOK Studio',
     bpm: 140, posBeats: 0, playing: false, recording: false,
     metronome: false, monitor: false, patternInSong: true, latencyMs: 0,
+    key: { root: 6, scale: 'minor' },           // тональность проекта: задаётся всем автотюнам
+    loop: { on: false, start: 0, end: 16 },     // зацикливание, доли (целые, конец > начала)
     selectedInsert: 1, selectedTrack: 0, selectedClip: null,
     tracks: [
       { name: 'Вокал Мейн', color: 1, insert: 1, armed: true,  mute: false, clips: [] },
@@ -795,8 +798,14 @@
     const f = Vox.live && Vox.live[i].fx[k]; if (f) f.apply(s.params);
   };
   Vox.setFx = (i, k, type) => {
-    st.mixer[i].fx[k] = type ? slot(type) : null;
+    st.mixer[i].fx[k] = type ? slot(type, type === 'autotune' && st.key ? { key: st.key.root, scale: st.key.scale } : null) : null;
     Vox.rebuildInsert(i);
+  };
+  // тональность проекта: одна на все автотюны (как Key в BandLab)
+  Vox.setProjectKey = (root, scale) => {
+    st.key = { root: +root, scale };
+    st.mixer.forEach((ch, i) => ch.fx.forEach((s, k) => { if (s && s.type === 'autotune') Vox.setFxParams(i, k, { key: +root, scale }); }));
+    Vox.emit('key');
   };
   Vox.toggleBypass = (i, k) => { const s = st.mixer[i].fx[k]; if (!s) return; s.bypass = !s.bypass; Vox.rebuildInsert(i); };
 
@@ -898,8 +907,10 @@
     return Math.max(0, g);
   }
   // t0 — момент, когда звучит позиция startBeat (до него должно оставаться не меньше maxPdc)
-  function scheduleClips(ctx, chans, t0, startBeat, list) {
-    const spb = 60 / st.bpm, songPos = startBeat * spb;
+  // endBeat — граница прохода цикла: клипы обрезаются по ней (с микро-затуханием против щелчка)
+  const DECLICK = 0.004;
+  function scheduleClips(ctx, chans, t0, startBeat, list, endBeat) {
+    const spb = 60 / st.bpm, songPos = startBeat * spb, endPos = endBeat == null ? Infinity : endBeat * spb;
     st.tracks.forEach((tr) => {
       if (tr.mute) return;
       const dest = (chans[tr.insert] || chans[0]).input;
@@ -907,9 +918,11 @@
       tr.clips.forEach((c) => {
         const b = Vox.buffers.get(c.bufferId); if (!b) return;
         const cs = c.startBeat * spb;
-        if (cs + c.dur <= songPos) return;
+        if (cs + c.dur <= songPos || cs >= endPos) return;
         const skip = Math.max(0, songPos - cs);
         const when = t0 + Math.max(0, cs - songPos) - pdc;
+        const len = Math.min(c.dur - skip, endPos - Math.max(cs, songPos));
+        if (len <= 0) return;
         const src = ctx.createBufferSource(); src.buffer = b.buffer;
         let out = src;
         if ((c.fadeIn || 0) > 0 || (c.fadeOut || 0) > 0) {
@@ -923,17 +936,47 @@
           }
           src.connect(g); out = g;
         }
-        out.connect(dest); src.start(when, c.offset + skip, c.dur - skip); list.push(src);
+        // начало посреди клипа или обрез по концу цикла — короткая рампа, чтобы стык не щёлкал
+        const cut = len < c.dur - skip - 1e-6;
+        if (skip > 0 || cut) {
+          const g = ctx.createGain(), gp = g.gain;
+          if (skip > 0) { gp.setValueAtTime(0, when); gp.linearRampToValueAtTime(1, when + DECLICK); }
+          if (cut) { gp.setValueAtTime(1, Math.max(when + DECLICK, when + len - DECLICK)); gp.linearRampToValueAtTime(0, when + len); }
+          out.connect(g); out = g;
+        }
+        out.connect(dest); src.start(when, c.offset + skip, len);
+        src.onended = () => { src.done = true; };
+        list.push(src);
       });
     });
   }
 
-  let timer = null, sources = [], nextStepIdx = 0, nextStepTime = 0;
+  let timer = null, sources = [], nextStepIdx = 0, nextStepTime = 0, nextLoopT = Infinity;
   Vox.t0 = 0; Vox.startBeat = 0; Vox.curPdc = 0;
+  Vox.loopRun = null; // { start, end } — цикл, с которым идёт текущее воспроизведение
 
+  // Цикл без пауз: каждый следующий проход [start, end) планируется заранее, ровно с момента конца
+  // предыдущего (nextLoopT), — те же источники и шаги, что и при обычной игре, только со сдвигом во времени.
+  function loopRange() {
+    const L = st.loop;
+    return L && L.on && !st.recording && L.end - L.start >= 1 ? { start: L.start, end: L.end } : null;
+  }
   function tick() {
-    const ctx = Vox.ctx, ahead = ctx.currentTime + 0.15 + Vox.curPdc, stepDur = 60 / st.bpm / 4;
+    const ctx = Vox.ctx, ahead = ctx.currentTime + 0.15 + Vox.curPdc, stepDur = 60 / st.bpm / 4, lp = Vox.loopRun;
+    if (lp) {
+      let added = false;
+      while (nextLoopT < ctx.currentTime + 0.5 + Vox.curPdc) {
+        scheduleClips(ctx, Vox.live, nextLoopT, lp.start, sources, lp.end);
+        nextLoopT += (lp.end - lp.start) * 60 / st.bpm; added = true;
+      }
+      if (added) sources = sources.filter((s) => !s.done);
+    }
     while (nextStepTime < ahead) {
+      if (lp && nextStepIdx >= lp.end * 4) {
+        nextStepTime -= (nextStepIdx - lp.end * 4) * stepDur; // момент конца прохода
+        nextStepIdx = lp.start * 4;
+        continue;
+      }
       if (st.patternInSong) playStep(ctx, Vox.live, nextStepIdx % 16, nextStepTime);
       if (st.metronome && nextStepIdx % 4 === 0) click(ctx, nextStepTime, nextStepIdx % 16 === 0);
       nextStepIdx++; nextStepTime += stepDur;
@@ -942,7 +985,8 @@
 
   Vox.currentBeat = () => {
     if (!st.playing || !Vox.ctx) return st.posBeats;
-    return Math.max(Vox.startBeat, Vox.startBeat + (Vox.ctx.currentTime - Vox.t0) * st.bpm / 60);
+    const b = Math.max(Vox.startBeat, Vox.startBeat + (Vox.ctx.currentTime - Vox.t0) * st.bpm / 60), lp = Vox.loopRun;
+    return lp && b >= lp.end ? lp.start + (b - lp.end) % (lp.end - lp.start) : b;
   };
 
   Vox.play = async () => {
@@ -950,9 +994,12 @@
     if (st.playing) return;
     const ctx = Vox.ctx;
     st.playing = true;
+    const lp = (Vox.loopRun = loopRange());
+    if (lp && st.posBeats >= lp.end) st.posBeats = lp.start; // курсор за концом цикла — играем с начала цикла
     Vox.curPdc = Vox.maxPdc(ctx.sampleRate);
     Vox.t0 = ctx.currentTime + 0.08 + Vox.curPdc; Vox.startBeat = st.posBeats;
-    sources = []; scheduleClips(ctx, Vox.live, Vox.t0, st.posBeats, sources);
+    sources = []; scheduleClips(ctx, Vox.live, Vox.t0, st.posBeats, sources, lp ? lp.end : null);
+    nextLoopT = lp ? Vox.t0 + (lp.end - st.posBeats) * 60 / st.bpm : Infinity;
     nextStepIdx = Math.ceil(st.posBeats * 4 - 1e-6);
     nextStepTime = Vox.t0 + (nextStepIdx / 4 - st.posBeats) * 60 / st.bpm;
     tick(); timer = setInterval(tick, 25);
@@ -965,13 +1012,20 @@
     if (!st.playing) { st.posBeats = 0; Vox.emit('transport'); return; }
     sources.forEach((s) => { try { s.stop(); } catch (e) {} }); sources = [];
     clearInterval(timer); timer = null;
-    st.playing = false; st.posBeats = Vox.startBeat;
+    st.playing = false; st.posBeats = Vox.startBeat; Vox.loopRun = null;
     broadcastTransport();
     Vox.emit('transport');
   };
 
   Vox.togglePlay = () => (st.playing ? Vox.stop() : Vox.play());
   Vox.setPosition = (beat) => { const was = st.playing; if (was) Vox.stop(); st.posBeats = Math.max(0, beat); if (was) Vox.play(); else Vox.emit('transport'); };
+  // зацикливание: границы — целые доли; во время игры перезапуск с текущего места
+  Vox.setLoop = (patch) => {
+    const L = Object.assign(st.loop, patch || {});
+    L.start = Math.max(0, Math.round(L.start)); L.end = Math.max(L.start + 1, Math.round(L.end));
+    if (st.playing && !st.recording) { const b = Vox.currentBeat(); Vox.stop(); st.posBeats = b; Vox.play(); }
+    else Vox.emit('transport');
+  };
   Vox.setBpm = (bpm) => {
     const was = st.playing; if (was) Vox.stop();
     st.bpm = Math.max(40, Math.min(240, bpm));

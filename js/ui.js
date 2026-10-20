@@ -1,6 +1,7 @@
 /* =====================================================================
    WOK Studio — ИНТЕРФЕЙС
-   Строит плейлист, Channel Rack, микшер и окна плагинов из Vox.state.
+   Раскладка в духе BandLab: транспорт сверху, таймлайн с заголовками треков (громкость, панорама, M/S/●, Fx),
+   снизу выдвижная панель трека (Эффекты / Бит / Запись), окна плагинов — модальные поверх всего.
    Внешний вид задают css/theme.css и css/app.css.
    ===================================================================== */
 (function () {
@@ -9,27 +10,36 @@
   function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const cssNum = (name) => parseFloat(getComputedStyle(document.documentElement).getPropertyValue(name)) || 0;
-  const insertLabel = (i) => i + ' · ' + st.mixer[i].name;
+  const insertLabel = (i) => (i === 0 ? 'Мастер' : i + ' · ' + st.mixer[i].name);
 
   let ppb = cssNum('--beat-px') || 28; // пикселей на долю
   let lastPointer = 'mouse';
   document.addEventListener('pointerdown', (e) => (lastPointer = e.pointerType), true);
 
+  // иконки (обводка currentColor, как в разметке)
+  const ICONS = {
+    mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',
+    beat: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5"/>',
+    dots: '<circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/>',
+    close: '<path d="M6 6l12 12M18 6 6 18"/>',
+    gear: '<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/>',
+    power: '<path d="M12 3v8"/><path d="M6.3 7.5a8 8 0 1 0 11.4 0"/>',
+    plus: '<path d="M12 5v14M5 12h14"/>'
+  };
+  function ico(name, cls) { const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('aria-hidden', 'true'); if (cls) s.setAttribute('class', cls); s.innerHTML = ICONS[name]; return s; }
+
   /* ------------------------------ подсказки ------------------------------ */
   const hintEl = $('hint');
   Vox.on('hint', (t) => { hintEl.textContent = t; });
-  function hoverHints(root) {
-    root.addEventListener('pointerover', (e) => {
-      const t = e.target.closest('[title]'); if (t && !st.playing) hintEl.textContent = t.title;
-    });
-  }
-  hoverHints(document.body);
+  document.body.addEventListener('pointerover', (e) => {
+    const t = e.target.closest('[title]'); if (t && !st.playing) hintEl.textContent = t.title;
+  });
 
   /* ------------------------------ РУЧКА ------------------------------ */
   function knob(o) {
     const root = el('div', 'knob' + (o.small ? ' small' : ''));
     const dial = el('div', 'knob-dial'); dial.appendChild(el('i')); dial.tabIndex = 0;
-    dial.setAttribute('role', 'slider'); dial.setAttribute('aria-label', o.label || 'ручка');
+    dial.setAttribute('role', 'slider'); dial.setAttribute('aria-label', o.aria || o.label || 'ручка');
     const val = el('div', 'knob-val');
     root.appendChild(dial);
     if (o.label) root.appendChild(el('div', 'knob-label', o.label));
@@ -37,18 +47,21 @@
     const { min, max } = o; let v = o.value;
     const norm = (x) => (o.log ? Math.log(x / min) / Math.log(max / min) : (x - min) / (max - min));
     const denorm = (p) => (o.log ? min * Math.pow(max / min, p) : min + p * (max - min));
-    function show() { dial.style.setProperty('--p', clamp(norm(v), 0, 1)); val.textContent = o.fmt ? o.fmt(v) : v.toFixed(2); }
+    function show() {
+      dial.style.setProperty('--p', clamp(norm(v), 0, 1)); val.textContent = o.fmt ? o.fmt(v) : v.toFixed(2);
+      dial.setAttribute('aria-valuetext', val.textContent);
+    }
     function set(nv, emit) {
       nv = clamp(nv, min, max); if (o.step) nv = Math.round(nv / o.step) * o.step;
       v = nv; show(); if (emit && o.onInput) o.onInput(v);
     }
     let sy = 0, sp = 0;
-    dial.addEventListener('pointerdown', (e) => { dial.setPointerCapture(e.pointerId); sy = e.clientY; sp = norm(v); e.preventDefault(); });
+    dial.addEventListener('pointerdown', (e) => { dial.setPointerCapture(e.pointerId); sy = e.clientY; sp = norm(v); e.preventDefault(); e.stopPropagation(); });
     dial.addEventListener('pointermove', (e) => {
       if (!dial.hasPointerCapture(e.pointerId)) return;
       set(denorm(clamp(sp + (sy - e.clientY) / (e.shiftKey ? 600 : 160), 0, 1)), true);
     });
-    dial.addEventListener('dblclick', () => set(o.def != null ? o.def : o.value, true));
+    dial.addEventListener('dblclick', (e) => { e.stopPropagation(); set(o.def != null ? o.def : o.value, true); });
     dial.addEventListener('wheel', (e) => { e.preventDefault(); set(denorm(clamp(norm(v) - Math.sign(e.deltaY) * 0.02, 0, 1)), true); }, { passive: false });
     dial.addEventListener('keydown', (e) => {
       const d = e.key === 'ArrowUp' || e.key === 'ArrowRight' ? 1 : e.key === 'ArrowDown' || e.key === 'ArrowLeft' ? -1 : 0;
@@ -57,98 +70,157 @@
     show();
     return { el: root, set: (x) => set(x, false) };
   }
+  const panText = (v) => (Math.abs(v) < 0.01 ? 'C' : (v < 0 ? 'L' : 'R') + Math.round(Math.abs(v) * 100));
+  // ручка панорамы: маленькая монохромная, с риской; значение — во всплывающей подсказке
+  function panKnob(ch, onChange) {
+    const k = knob({ small: true, min: -1, max: 1, value: ch.pan, def: 0, step: 0.01, fmt: panText, aria: 'Панорама',
+      onInput: (v) => { ch.pan = v; k.el.title = 'Панорама ' + panText(v) + ' (двойной клик — центр)'; Vox.updateMix(); if (onChange) onChange(v); } });
+    k.el.classList.add('pan-knob'); k.el.title = 'Панорама ' + panText(ch.pan) + ' (двойной клик — центр)';
+    return k;
+  }
+  // горизонтальный ползунок с белым круглым бегунком (громкость, посылы)
+  function hslider(o) {
+    const r = el('input', 'hslider' + (o.cls ? ' ' + o.cls : ''));
+    r.type = 'range'; r.min = o.min; r.max = o.max; r.step = o.step || 0.01; r.value = o.value;
+    r.setAttribute('aria-label', o.label || 'ползунок');
+    const show = () => { r.style.setProperty('--p', (r.value - o.min) / (o.max - o.min)); if (o.title) r.title = o.title(+r.value); };
+    r.addEventListener('input', () => { show(); o.onInput(+r.value); });
+    r.addEventListener('dblclick', () => { if (o.def == null) return; r.value = o.def; show(); o.onInput(+r.value); });
+    r.addEventListener('pointerdown', (e) => e.stopPropagation());
+    show();
+    r.sync = (v) => { r.value = v; show(); };
+    return r;
+  }
+  const dbText = (v) => { const d = Vox.faderDb(v); return d === -Infinity ? '−∞ дБ' : (d > 0 ? '+' : '') + d.toFixed(1) + ' дБ'; };
+  const sendText = (v) => { const d = Vox.sendDb(v); return d === -Infinity ? '−∞' : (d > 0 ? '+' : '') + d.toFixed(1) + ' дБ'; };
 
-  /* ------------------------------ ОКНА ------------------------------ */
-  const layer = $('windows'); const wins = {}; let zTop = 10;
-  function front(win) { Object.values(wins).forEach((w) => w.classList.remove('front')); win.classList.add('front'); win.style.zIndex = ++zTop; }
+  /* ------------------------------ ОКНА ПЛАГИНОВ (модальные) ------------------------------
+     Одно окно за раз поверх студии; закрывается крестиком, Esc и кликом по фону. */
+  const layer = $('windows'); const wins = {};
   function openWindow(id, o) {
-    if (wins[id]) { front(wins[id]); return wins[id]; }
+    if (wins[id]) return wins[id];
+    Object.keys(wins).forEach(closeWindow);
+    layer.classList.add('open');
     const win = el('div', 'win'); win.dataset.win = id;
+    win.setAttribute('role', 'dialog'); win.setAttribute('aria-modal', 'true'); win.setAttribute('aria-label', o.title);
     const W = layer.clientWidth, H = layer.clientHeight;
-    const w = Math.min(o.w, W), h = o.h ? Math.min(o.h, H) : null;
-    win.style.width = w + 'px'; if (h) win.style.height = h + 'px';
-    win.style.left = clamp(o.x, 0, Math.max(0, W - w)) + 'px';
-    win.style.top = clamp(o.y, 0, Math.max(0, H - (h || 200))) + 'px';
+    win.style.width = Math.min(o.w, W) + 'px'; if (o.h) win.style.height = Math.min(o.h, H) + 'px';
     const tb = el('div', 'win-title'); tb.appendChild(el('span', 'w-name', o.title));
     const sub = el('span', 'w-sub', o.sub || ''); tb.appendChild(sub);
-    const x = el('button', 'w-close', '×'); x.title = 'Закрыть'; x.setAttribute('aria-label', 'Закрыть окно');
+    const x = el('button', 'w-close'); x.appendChild(ico('close')); x.title = 'Закрыть (Esc)'; x.setAttribute('aria-label', 'Закрыть окно');
     x.onclick = () => closeWindow(id); tb.appendChild(x);
     const body = el('div', 'win-body');
     win.append(tb, body); layer.appendChild(win);
-    win.addEventListener('pointerdown', () => front(win));
-    let sx, sy, ox, oy;
-    tb.addEventListener('pointerdown', (e) => {
-      if (e.target === x || matchMedia('(max-width: 820px)').matches) return;
-      tb.setPointerCapture(e.pointerId); sx = e.clientX; sy = e.clientY; ox = win.offsetLeft; oy = win.offsetTop;
-    });
-    tb.addEventListener('pointermove', (e) => {
-      if (!tb.hasPointerCapture(e.pointerId)) return;
-      win.style.left = clamp(ox + e.clientX - sx, 0, layer.clientWidth - 60) + 'px';
-      win.style.top = clamp(oy + e.clientY - sy, 0, layer.clientHeight - 26) + 'px';
-    });
-    win.sub = sub; win.body = body; win.onCloseCb = o.onClose;
-    wins[id] = win; front(win);
+    win.sub = sub; win.body = body; win.onCloseCb = o.onClose; win.opener = document.activeElement;
+    wins[id] = win;
     if (o.build) o.build(body, win);
-    syncWindowButtons();
+    x.focus({ preventScroll: true });
     return win;
   }
   function closeWindow(id) {
     const w = wins[id]; if (!w) return;
-    if (w.onCloseCb) w.onCloseCb(); w.remove(); delete wins[id]; syncWindowButtons();
+    if (w.onCloseCb) w.onCloseCb(); w.remove(); delete wins[id];
+    if (!Object.keys(wins).length) layer.classList.remove('open');
+    if (w.opener && document.contains(w.opener)) w.opener.focus({ preventScroll: true });
   }
-  function toggleWindow(id) { wins[id] ? closeWindow(id) : OPENERS[id](); }
-  function syncWindowButtons() {
-    $('wbRack').classList.toggle('on', !!wins.rack);
-    $('wbMixer').classList.toggle('on', !!wins.mixer);
-    $('wbBrowser').classList.toggle('on', !$('workspace').classList.contains('no-browser'));
-  }
+  layer.addEventListener('pointerdown', (e) => { if (e.target === layer) Object.keys(wins).forEach(closeWindow); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && Object.keys(wins).length) { e.preventDefault(); Object.keys(wins).forEach(closeWindow); } });
 
   /* ------------------------------ ВЕРХНЯЯ ПАНЕЛЬ ------------------------------ */
-  $('btnPlay').onclick = () => Vox.togglePlay();
-  $('btnStop').onclick = () => Vox.stop();
-  $('btnRec').onclick = () => Vox.toggleRecord();
+  // Play/Pause как в BandLab: пауза оставляет курсор на месте, «в начало» — отдельной кнопкой
+  function playPause() {
+    if (!st.playing) { Vox.play(); return; }
+    const b = Vox.currentBeat(); Vox.stop(); st.posBeats = b; Vox.emit('transport');
+  }
+  function record() {
+    if (!st.recording && !st.tracks.some((t) => t.armed)) { // как в BandLab: пишем на выбранный трек
+      st.tracks.forEach((t, k) => (t.armed = k === st.selectedTrack)); Vox.routeMonitor(); renderPlaylist(); syncRecPane();
+    }
+    Vox.toggleRecord();
+  }
+  function toggleLoop() {
+    const L = st.loop, pos = st.playing ? Vox.currentBeat() : st.posBeats;
+    if (!L.on && (pos < L.start || pos >= L.end) && pos > 0) { const s = Math.floor(pos / 4) * 4; Vox.setLoop({ on: true, start: s, end: s + 16 }); }
+    else Vox.setLoop({ on: !L.on });
+    Vox.hint(st.loop.on ? 'Цикл: такты ' + (st.loop.start / 4 + 1) + '–' + (st.loop.end / 4 + 1) + '. Края цикла тянутся на линейке' : 'Цикл выключен');
+  }
+  $('btnPlay').onclick = playPause;
+  $('btnRewind').onclick = () => Vox.setPosition(0);
+  $('btnRec').onclick = record;
+  $('btnLoop').onclick = toggleLoop;
   $('btnExport').onclick = () => Vox.exportMix().catch((e) => Vox.hint('Экспорт не удался: ' + e.message));
+  $('btnSave').onclick = () => Vox.saveProject();
   $('bpm').addEventListener('change', (e) => { Vox.setBpm(+e.target.value || 140); e.target.value = st.bpm; });
   $('btnMetro').onclick = () => { st.metronome = !st.metronome; syncTransport(); };
   $('btnMonitor').onclick = () => Vox.setMonitor(!st.monitor);
   $('btnPattern').onclick = () => { st.patternInSong = !st.patternInSong; syncTransport(); renderPlaylist(); };
-  $('wbRack').onclick = () => toggleWindow('rack');
-  $('wbMixer').onclick = () => toggleWindow('mixer');
-  $('wbBrowser').onclick = () => { $('workspace').classList.toggle('no-browser'); syncWindowButtons(); };
+  $('wbBrowser').onclick = () => { $('workspace').classList.toggle('no-browser'); syncLibraryBtn(); };
+  function syncLibraryBtn() { const on = !$('workspace').classList.contains('no-browser'); $('wbBrowser').classList.toggle('on', on); $('wbBrowser').setAttribute('aria-pressed', String(on)); }
   $('latencyMs').addEventListener('change', (e) => { st.latencyMs = +e.target.value || 0; Vox.hint('Сдвиг новых записей: ' + st.latencyMs + ' мс'); });
 
+  // тональность проекта (Key): одна на все автотюны
+  const SCALE_SHORT = { minor: 'min', major: 'maj', harmMinor: 'гарм. min', pentaMinor: 'пента min', pentaMajor: 'пента maj', chromatic: '' };
+  function syncKey() {
+    const sel = $('projKey'), cur = st.key.root + '|' + st.key.scale;
+    sel.innerHTML = '';
+    const add = (root, scale) => { const o = el('option', '', scale === 'chromatic' ? 'Хроматика' : Vox.NOTE_NAMES[root] + ' ' + SCALE_SHORT[scale]); o.value = root + '|' + scale; sel.appendChild(o); };
+    Vox.NOTE_NAMES.forEach((n, r) => { add(r, 'minor'); add(r, 'major'); });
+    add(0, 'chromatic');
+    if (![...sel.options].some((o) => o.value === cur)) add(st.key.root, st.key.scale);
+    sel.value = st.key.scale === 'chromatic' ? '0|chromatic' : cur;
+  }
+  $('projKey').addEventListener('change', (e) => {
+    const [r, sc] = e.target.value.split('|'); Vox.setProjectKey(+r, sc);
+    Vox.hint('Тональность проекта: ' + e.target.selectedOptions[0].textContent + ' — применена ко всем автотюнам');
+  });
+  Vox.on('key', () => {
+    syncKey();
+    // открытое окно автотюна показывает старую тональность — пересобрать
+    Object.keys(wins).forEach((id) => { const [, i, k] = id.split('-').map(Number); const s = st.mixer[i] && st.mixer[i].fx[k]; if (s && s.type === 'autotune') { closeWindow(id); openPlugin(i, k); } });
+  });
+
+  // громкость мастера
+  const masterVol = $('masterVol');
+  const syncMaster = () => { masterVol.value = st.mixer[0].vol; masterVol.style.setProperty('--p', st.mixer[0].vol); masterVol.title = 'Мастер ' + dbText(st.mixer[0].vol); };
+  masterVol.addEventListener('input', () => { st.mixer[0].vol = +masterVol.value; syncMaster(); Vox.updateMix(); });
+  masterVol.addEventListener('dblclick', () => { st.mixer[0].vol = 0.8; syncMaster(); Vox.updateMix(); });
+
   function syncTransport() {
-    $('btnPlay').classList.toggle('active', st.playing);
-    $('btnRec').classList.toggle('active', st.recording);
-    $('btnMetro').classList.toggle('on', st.metronome);
-    $('btnMonitor').classList.toggle('on', st.monitor);
-    $('btnPattern').classList.toggle('on', st.patternInSong);
+    const play = $('btnPlay');
+    play.classList.toggle('playing', st.playing); play.setAttribute('aria-label', st.playing ? 'Пауза' : 'Воспроизведение');
+    $('btnRec').classList.toggle('active', st.recording); $('recBig').classList.toggle('active', st.recording);
+    $('btnMetro').classList.toggle('on', st.metronome); $('btnMetro').setAttribute('aria-pressed', String(st.metronome));
+    $('btnMonitor').classList.toggle('on', st.monitor); $('btnMonitor').setAttribute('aria-pressed', String(st.monitor));
+    $('btnPattern').classList.toggle('on', st.patternInSong); $('btnPattern').setAttribute('aria-pressed', String(st.patternInSong));
+    $('btnLoop').classList.toggle('on', st.loop.on); $('btnLoop').setAttribute('aria-pressed', String(st.loop.on));
+    renderLoop();
   }
   Vox.on('transport', syncTransport);
 
-  /* ------------------------------ БРАУЗЕР ------------------------------ */
+  /* ------------------------------ БИБЛИОТЕКА ------------------------------ */
   function renderBrowser() {
     const pl = $('brPlugins'); pl.innerHTML = '';
     Vox.FX_ORDER.forEach((t) => {
       const li = el('li'); li.appendChild(el('span', 'dot'));
       li.appendChild(el('span', '', Vox.FX[t].title));
-      li.title = 'Вставить ' + Vox.FX[t].title + ' в канал ' + insertLabel(st.selectedInsert);
-      li.onclick = () => {
-        const fx = st.mixer[st.selectedInsert].fx, k = fx.indexOf(null);
-        if (k < 0) { Vox.hint('В канале нет свободных слотов'); return; }
-        Vox.setFx(st.selectedInsert, k, t); openPlugin(st.selectedInsert, k);
-      };
+      li.title = 'Добавить ' + Vox.FX[t].title + ' в цепочку канала ' + insertLabel(st.selectedInsert);
+      li.onclick = () => addFx(st.selectedInsert, t);
       pl.appendChild(li);
     });
     const al = $('brAudio'); al.innerHTML = '';
     if (!Vox.buffers.size) al.appendChild(el('li', 'empty', 'Пока пусто'));
     Vox.buffers.forEach((b, id) => {
-      const li = el('li'); li.appendChild(el('span', 'dot')); li.lastChild.style.background = 'var(--clip-6)';
+      const li = el('li'); li.appendChild(el('span', 'dot audio'));
       li.appendChild(el('span', '', b.name + ' · ' + b.buffer.duration.toFixed(1) + ' с'));
-      li.title = 'Поставить на дорожку «' + st.tracks[st.selectedTrack].name + '» в позицию курсора';
+      li.title = 'Поставить на трек «' + st.tracks[st.selectedTrack].name + '» в позицию курсора';
       li.onclick = () => Vox.addClip(st.selectedTrack, id, Math.floor(st.posBeats));
       al.appendChild(li);
     });
+  }
+  function addFx(i, type) {
+    const fx = st.mixer[i].fx, k = fx.indexOf(null);
+    if (k < 0) { Vox.hint('В цепочке нет свободных мест (максимум 8 эффектов)'); return; }
+    Vox.setFx(i, k, type); openPlugin(i, k);
   }
   Vox.on('buffers', renderBrowser);
   $('fileImport').addEventListener('change', async (e) => {
@@ -156,72 +228,84 @@
     e.target.value = '';
   });
 
-  /* ------------------------------ ПЛЕЙЛИСТ ------------------------------ */
+  /* ------------------------------ ТАЙМЛАЙН ------------------------------ */
   const heads = $('plHeads'), lanes = $('lanes'), ruler = $('ruler'), content = $('plContent'), scroller = $('plScroll');
+  const loopEl = $('loopRegion');
   const peakCache = new Map();
+  let trackMeters = [];
 
-  function totalBeats() { return Math.max(Vox.songBeats() + 32, Math.ceil(scroller.clientWidth / ppb / 4 + 1) * 4, 128); }
+  function totalBeats() { return Math.max(Vox.songBeats() + 32, Math.ceil(scroller.clientWidth / ppb / 4 + 1) * 4, 128, st.loop.end + 16); }
+  const isBeatTrack = (tr) => /бит|beat|минус|инстр/i.test(tr.name);
+
+  function selectTrack(ti) {
+    const tr = st.tracks[ti]; if (!tr) return;
+    st.selectedTrack = ti; st.selectedInsert = tr.insert;
+    heads.querySelectorAll('.head[data-track]').forEach((h) => h.classList.toggle('selected', +h.dataset.track === ti));
+    renderFxPane(); renderBrowser(); syncRecPane();
+  }
 
   function renderPlaylist() {
     $('playlist').style.setProperty('--beat-px', ppb + 'px');
     const tb = totalBeats();
     content.style.width = tb * ppb + 'px';
 
-    // линейка
+    // линейка: номера тактов
     ruler.innerHTML = '';
-    const every = ppb < 10 ? 4 : ppb < 18 ? 2 : 1;
-    for (let b = 0; b < tb / 4; b += every) {
-      const s = el('span', b % 4 === 0 ? 'bar4' : '', String(b + 1)); s.style.left = b * 4 * ppb + 'px'; ruler.appendChild(s);
+    const every = ppb < 8 ? 8 : ppb < 14 ? 4 : ppb < 22 ? 2 : 1;
+    for (let b = 0; b < tb / 4; b++) {
+      const s = el('span', b % every === 0 ? 'bar' : 'tick', b % every === 0 ? String(b + 1) : ''); s.style.left = b * 4 * ppb + 'px'; ruler.appendChild(s);
     }
+    ruler.appendChild(loopEl); renderLoop();
 
-    heads.innerHTML = ''; lanes.innerHTML = '';
-
-    // строка паттерна
-    const ph = el('div', 'head pattern-head');
-    ph.appendChild(el('div', 'swatch')); ph.firstChild.style.background = 'var(--clip-6)';
-    const pm = el('div', 'h-main'); pm.appendChild(el('div', 'h-name', 'Паттерн 1'));
-    ph.appendChild(pm);
-    const pb = el('button', 'sq' + (st.patternInSong ? ' on' : ''), 'P'); pb.title = 'Паттерн играет в песне';
-    pb.onclick = (e) => { e.stopPropagation(); st.patternInSong = !st.patternInSong; syncTransport(); renderPlaylist(); };
-    ph.appendChild(pb);
-    ph.onclick = () => OPENERS.rack();
-    heads.appendChild(ph);
-    const pl = el('div', 'lane pattern-lane');
-    if (st.patternInSong) {
-      const blk = el('div', 'pattern-block', 'Паттерн 1 · бит из Channel Rack');
-      blk.style.width = Vox.songBeats() * ppb + 'px'; pl.appendChild(blk);
-    }
-    lanes.appendChild(pl);
+    heads.innerHTML = ''; lanes.innerHTML = ''; trackMeters = [];
 
     st.tracks.forEach((tr, ti) => {
-      // заголовок дорожки
-      const h = el('div', 'head' + (ti === st.selectedTrack ? ' selected' : ''));
-      const sw = el('div', 'swatch'); sw.style.background = 'var(--clip-' + tr.color + ')';
-      const main = el('div', 'h-main');
-      const name = el('input', 'h-name'); name.value = tr.name; name.id = 'trackName' + ti; name.setAttribute('aria-label', 'Название дорожки');
-      name.addEventListener('change', () => { tr.name = name.value || tr.name; renderBrowser(); });
-      const route = el('div', 'h-route'); route.appendChild(el('span', '', 'Канал'));
-      const sel = el('select'); sel.id = 'trackInsert' + ti; sel.setAttribute('aria-label', 'Канал микшера');
-      for (let i = 1; i < st.mixer.length; i++) { const op = el('option', '', insertLabel(i)); op.value = i; if (i === tr.insert) op.selected = true; sel.appendChild(op); }
-      sel.addEventListener('change', () => { tr.insert = +sel.value; Vox.routeMonitor(); });
-      sel.addEventListener('click', (e) => e.stopPropagation());
-      route.appendChild(sel); main.append(name, route);
+      const ch = st.mixer[tr.insert] || st.mixer[0];
+      // заголовок трека
+      const h = el('div', 'head' + (ti === st.selectedTrack ? ' selected' : '') + (tr.mute ? ' muted' : ''));
+      h.dataset.track = ti; h.style.setProperty('--c', 'var(--clip-' + tr.color + ')');
+      const top = el('div', 'h-top');
+      const num = el('span', 'h-num', String(ti + 1).padStart(2, '0'));
+      const icon = el('span', 'h-ico'); icon.appendChild(ico(isBeatTrack(tr) ? 'beat' : 'mic'));
+      const name = el('span', 'h-name', tr.name); name.title = 'Двойной клик — переименовать';
+      name.ondblclick = (e) => { e.stopPropagation(); renameInline(name, tr.name, (v) => { tr.name = v; renderPlaylist(); renderBrowser(); syncRecPane(); }); };
+      const more = el('button', 'h-more'); more.appendChild(ico('dots')); more.title = 'Настройки трека'; more.setAttribute('aria-label', 'Настройки трека ' + tr.name);
+      more.onclick = (e) => { e.stopPropagation(); openTrackSheet(ti); };
+      top.append(num, icon, name, more);
+
+      const mid = el('div', 'h-mid');
+      const fxList = ch.fx.filter((s) => s);
+      const fxb = el('button', 'fx-badge' + (fxList.length ? ' on' : ''));
+      fxb.appendChild(el('b', '', 'Fx'));
+      fxb.appendChild(el('span', '', fxList.length ? Vox.FX[fxList[0].type].title + (fxList.length > 1 ? ' +' + (fxList.length - 1) : '') : '+'));
+      fxb.title = 'Эффекты трека: канал ' + insertLabel(tr.insert);
+      fxb.onclick = (e) => { e.stopPropagation(); selectTrack(ti); openDrawer('fx'); };
       const btns = el('div', 'h-btns');
-      const m = el('button', 'sq' + (tr.mute ? ' on' : ''), 'M'); m.title = 'Заглушить дорожку';
+      const m = el('button', 'sq' + (tr.mute ? ' on' : ''), 'M'); m.title = 'Заглушить трек'; m.setAttribute('aria-pressed', String(!!tr.mute));
       m.onclick = (e) => { e.stopPropagation(); tr.mute = !tr.mute; renderPlaylist(); if (st.playing) { Vox.stop(); Vox.play(); } };
-      const r = el('button', 'sq arm' + (tr.armed ? ' on' : ''), '●'); r.title = 'Писать на эту дорожку';
-      r.onclick = (e) => { e.stopPropagation(); st.tracks.forEach((t, k) => (t.armed = k === ti ? !t.armed : false)); Vox.routeMonitor(); renderPlaylist(); };
-      const dup = el('button', 'sq', '⧉'); dup.title = 'Дублировать дорожку: клипы и канал с эффектами (Ctrl+D)';
-      dup.setAttribute('aria-label', 'Дублировать дорожку ' + tr.name);
-      dup.onclick = (e) => { e.stopPropagation(); Vox.duplicateTrack(ti); };
-      btns.append(dup, m, r);
-      h.append(sw, main, btns);
-      h.onclick = () => { st.selectedTrack = ti; st.selectedInsert = tr.insert; renderPlaylist(); if (wins.mixer) renderMixer(); renderBrowser(); };
+      const so = el('button', 'sq solo' + (ch.solo ? ' on' : ''), 'S'); so.title = 'Соло (канал ' + insertLabel(tr.insert) + ')'; so.setAttribute('aria-pressed', String(!!ch.solo));
+      so.onclick = (e) => { e.stopPropagation(); ch.solo = !ch.solo; Vox.updateMix(); renderPlaylist(); };
+      const r = el('button', 'sq arm' + (tr.armed ? ' on' : '')); r.appendChild(el('i')); r.title = 'Писать на этот трек'; r.setAttribute('aria-label', 'Запись на трек ' + tr.name); r.setAttribute('aria-pressed', String(!!tr.armed));
+      r.onclick = (e) => { e.stopPropagation(); armTrack(tr.armed ? -1 : ti); };
+      btns.append(m, so, r);
+      mid.append(fxb, btns);
+
+      const bot = el('div', 'h-bot');
+      const vol = hslider({ min: 0, max: 1, value: ch.vol, def: 0.8, label: 'Громкость ' + tr.name, title: (v) => 'Громкость ' + dbText(v) + ' (двойной клик — 0 дБ)',
+        onInput: (v) => { ch.vol = v; Vox.updateMix(); if (fxpVol && st.selectedInsert === tr.insert) fxpVol.sync(v); } });
+      bot.append(vol, panKnob(ch).el);
+
+      const mc = el('canvas', 'h-meter'); mc.width = 160; mc.height = 2; trackMeters.push({ c: mc, i: tr.insert });
+      h.append(top, mid, bot, mc);
+      h.onclick = (e) => {
+        if (Vox.isMobile() && e.target.closest('.h-top')) { openTrackSheet(ti); return; }
+        selectTrack(ti);
+      };
       heads.appendChild(h);
 
       // дорожка
-      const lane = el('div', 'lane'); lane.dataset.track = ti;
-      if (!tr.clips.length && ti === 0) lane.appendChild(el('div', 'lane-empty', 'Перетащи сюда аудио или включи ● и нажми запись'));
+      const lane = el('div', 'lane'); lane.dataset.track = ti; lane.style.setProperty('--c', 'var(--clip-' + tr.color + ')');
+      if (!tr.clips.length && ti === 0) lane.appendChild(el('div', 'lane-empty', 'Перетащи сюда WAV/MP3 или нажми ● и запись'));
       tr.clips.forEach((c) => lane.appendChild(renderClip(c, tr, ti)));
       lane.addEventListener('dragover', (e) => { e.preventDefault(); lane.classList.add('drop'); });
       lane.addEventListener('dragleave', () => lane.classList.remove('drop'));
@@ -234,6 +318,39 @@
       lane.addEventListener('pointerdown', (e) => { if (e.target === lane) { st.selectedClip = null; lanes.querySelectorAll('.clip.selected').forEach((c) => c.classList.remove('selected')); } });
       lanes.appendChild(lane);
     });
+
+    // строка бита (паттерн Channel Rack)
+    const ph = el('div', 'head pattern-head' + (st.patternInSong ? '' : ' muted'));
+    ph.style.setProperty('--c', 'var(--clip-5)');
+    const pt = el('div', 'h-top');
+    const pi = el('span', 'h-ico'); pi.appendChild(ico('beat'));
+    pt.append(el('span', 'h-num', '♪'), pi, el('span', 'h-name', 'Бит · Rack'));
+    const pb = el('button', 'sq' + (st.patternInSong ? ' on' : ''), 'P'); pb.title = 'Бит из Channel Rack играет в песне'; pb.setAttribute('aria-pressed', String(st.patternInSong));
+    pb.onclick = (e) => { e.stopPropagation(); st.patternInSong = !st.patternInSong; syncTransport(); renderPlaylist(); };
+    pt.appendChild(pb);
+    ph.appendChild(pt); ph.title = 'Открыть бит (Channel Rack)';
+    ph.onclick = () => openDrawer('beat');
+    heads.appendChild(ph);
+    const pl = el('div', 'lane pattern-lane');
+    if (st.patternInSong) {
+      const blk = el('div', 'pattern-block', 'Бит · Channel Rack');
+      blk.style.width = Vox.songBeats() * ppb + 'px'; pl.appendChild(blk);
+    }
+    lanes.appendChild(pl);
+  }
+
+  function renameInline(node, value, done) {
+    const inp = el('input', 'rename'); inp.value = value; inp.maxLength = 40; inp.setAttribute('aria-label', 'Новое имя');
+    node.replaceWith(inp); inp.focus(); inp.select();
+    let fin = false;
+    const end = (save) => { if (fin) return; fin = true; done(save && inp.value.trim() ? inp.value.trim() : value); };
+    inp.onblur = () => end(true);
+    inp.onkeydown = (k) => { k.stopPropagation(); if (k.key === 'Enter') inp.blur(); if (k.key === 'Escape') end(false); };
+    inp.onpointerdown = (e) => e.stopPropagation();
+  }
+  function armTrack(ti) {
+    st.tracks.forEach((t, k) => (t.armed = k === ti));
+    Vox.routeMonitor(); renderPlaylist(); syncRecPane();
   }
 
   function renderClip(c, tr, ti) {
@@ -259,7 +376,7 @@
     requestAnimationFrame(() => drawWave(cv, c, w));
 
     const select = () => {
-      st.selectedClip = c.id; st.selectedTrack = ti;
+      st.selectedClip = c.id; if (st.selectedTrack !== ti) selectTrack(ti);
       lanes.querySelectorAll('.clip.selected').forEach((x) => x.classList.remove('selected')); d.classList.add('selected');
     };
     const snap = (beat, e) => (e.altKey ? beat : Math.round(beat * 4) / 4);
@@ -316,7 +433,7 @@
 
   function drawWave(cv, c, w) {
     const b = Vox.buffers.get(c.bufferId); if (!b) return;
-    const W = Math.min(4096, Math.max(2, Math.round(w))), H = 40;
+    const W = Math.min(4096, Math.max(2, Math.round(w))), H = 48;
     cv.width = W; cv.height = H;
     const key = c.bufferId + ':' + W + ':' + c.offset.toFixed(4) + ':' + c.dur.toFixed(4);
     let peaks = peakCache.get(key);
@@ -337,6 +454,7 @@
     const col = getComputedStyle(cv.parentNode.querySelector('.c-name')).backgroundColor;
     // волна с учётом fade: громкость на краях уменьшается так же, как при воспроизведении
     const spx = c.dur / W, fi = c.fadeIn || 0, fo = c.fadeOut || 0;
+    g.clearRect(0, 0, W, H);
     g.fillStyle = col;
     for (let x = 0; x < W; x++) {
       const t = x * spx;
@@ -344,17 +462,50 @@
       const hh = Math.max(1, peaks[x] * H * 0.95 * k); g.fillRect(x, (H - hh) / 2, 1, hh);
     }
     if (fi > 0 || fo > 0) {
-      g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 1; g.beginPath();
+      g.strokeStyle = 'rgba(255,255,255,.6)'; g.lineWidth = 1; g.beginPath();
       if (fi > 0) { g.moveTo(0, H); g.lineTo(fi / spx, 0); }
       if (fo > 0) { g.moveTo(W - fo / spx, 0); g.lineTo(W, H); }
       g.stroke();
     }
   }
 
+  // линейка: клик — курсор; протяжка — новый цикл; края и тело цикла тянутся (шаг — доля, с Shift — такт)
+  function renderLoop() {
+    const L = st.loop;
+    loopEl.hidden = false;
+    loopEl.classList.toggle('on', L.on);
+    loopEl.style.left = L.start * ppb + 'px'; loopEl.style.width = (L.end - L.start) * ppb + 'px';
+    loopEl.title = 'Цикл ' + (L.on ? '(вкл)' : '(выкл)') + ': доли ' + (L.start + 1) + '–' + L.end + '. Тяни края или середину; L — вкл/выкл';
+    $('playlist').classList.toggle('looping', L.on);
+  }
+  if (!loopEl.querySelector('.lh')) loopEl.append(el('i', 'lh l'), el('i', 'lh r'));
+  const beatAt = (clientX) => (clientX - ruler.getBoundingClientRect().left) / ppb;
   ruler.addEventListener('pointerdown', (e) => {
-    const x = e.clientX - ruler.getBoundingClientRect().left;
-    Vox.setPosition(Math.max(0, Math.round(x / ppb)));
+    if (e.button === 2) return;
+    e.preventDefault(); ruler.setPointerCapture(e.pointerId);
+    const L = st.loop, b0 = beatAt(e.clientX), x0 = e.clientX;
+    const part = e.target.closest('.lh') ? (e.target.classList.contains('l') ? 'l' : 'r') : e.target.closest('.loop-region') && L.on ? 'body' : null;
+    const s0 = L.start, e0 = L.end;
+    let mode = part, moved = false;
+    const snapB = (b, ev) => { const q = ev.shiftKey ? 4 : 1; return Math.round(b / q) * q; };
+    const mv = (ev) => {
+      if (Math.abs(ev.clientX - x0) > 5) moved = true;
+      if (!moved) return;
+      const b = beatAt(ev.clientX);
+      if (!mode) mode = 'new';
+      if (mode === 'l') L.start = clamp(snapB(b, ev), 0, e0 - 1);
+      else if (mode === 'r') L.end = Math.max(s0 + 1, snapB(b, ev));
+      else if (mode === 'body') { const d = snapB(b - b0, ev); L.start = Math.max(0, s0 + d); L.end = L.start + (e0 - s0); }
+      else { const a = snapB(Math.min(b, b0), ev), z = snapB(Math.max(b, b0), ev); L.start = Math.max(0, a); L.end = Math.max(L.start + 1, z); L.on = true; }
+      renderLoop();
+    };
+    const up = () => {
+      ruler.removeEventListener('pointermove', mv); ruler.removeEventListener('pointerup', up); ruler.removeEventListener('pointercancel', up);
+      if (moved) { Vox.setLoop({}); Vox.history.schedule(); } else Vox.setPosition(Math.max(0, Math.round(b0)));
+    };
+    ruler.addEventListener('pointermove', mv); ruler.addEventListener('pointerup', up); ruler.addEventListener('pointercancel', up);
   });
+
   $('zoomIn').onclick = () => { ppb = Math.min(96, ppb * 1.25); renderPlaylist(); };
   $('zoomOut').onclick = () => { ppb = Math.max(6, ppb / 1.25); renderPlaylist(); };
   $('splitBtn').onclick = () => Vox.splitAtCursor();
@@ -365,17 +516,245 @@
   };
   $('addTrack').onclick = () => {
     const n = st.tracks.length;
-    st.tracks.push({ name: 'Дорожка ' + (n + 1), color: (n % 6) + 1, insert: Math.min(st.mixer.length - 1, n + 1), armed: false, mute: false, clips: [] });
-    renderPlaylist();
+    st.tracks.push({ name: 'Трек ' + (n + 1), color: (n % 6) + 1, insert: Math.min(st.mixer.length - 1, n + 1), armed: false, mute: false, clips: [] });
+    renderPlaylist(); selectTrack(n);
   };
   scroller.addEventListener('scroll', () => { heads.scrollTop = scroller.scrollTop; });
   heads.addEventListener('wheel', (e) => { scroller.scrollTop += e.deltaY; }, { passive: true });
-  Vox.on('tracks', () => { renderPlaylist(); renderBrowser(); });
+  Vox.on('tracks', () => { renderPlaylist(); renderBrowser(); syncRecPane(); });
+
+  /* ------------------------------ ШТОРКА (bottom sheet) ------------------------------
+     На телефоне — снизу, на компьютере — диалог по центру. Одна за раз. */
+  let sheet = null;
+  function closeSheet() {
+    if (!sheet) return;
+    const s = sheet; sheet = null; s.back.remove(); document.removeEventListener('keydown', s.key, true);
+    if (s.opener && document.contains(s.opener)) s.opener.focus({ preventScroll: true });
+  }
+  function openSheet(title, sub, build) {
+    closeSheet();
+    const back = el('div', 'sheet-back'), sh = el('div', 'sheet');
+    sh.setAttribute('role', 'dialog'); sh.setAttribute('aria-modal', 'true'); sh.setAttribute('aria-label', title);
+    const head = el('div', 'sheet-head');
+    head.append(el('div', 'sheet-grip'), el('span', 'sheet-title', title), el('span', 'sheet-sub', sub || ''));
+    const x = el('button', 'w-close'); x.appendChild(ico('close')); x.title = 'Закрыть'; x.setAttribute('aria-label', 'Закрыть панель'); x.onclick = closeSheet;
+    head.appendChild(x); sh.appendChild(head);
+    const opener = document.activeElement;
+    back.appendChild(sh); document.body.appendChild(back);
+    back.addEventListener('pointerdown', (e) => { if (e.target === back) closeSheet(); });
+    const key = (e) => { if (e.key === 'Escape') { e.stopPropagation(); closeSheet(); } };
+    document.addEventListener('keydown', key, true);
+    sheet = { back, key, opener };
+    const first = build(sh);
+    (first || x).focus({ preventScroll: true });
+  }
+  function sheetRow(label, control) { const r = el('label', 'sheet-row'); r.appendChild(el('span', '', label)); r.appendChild(control); return r; }
+  function insertSelect(id, value, onChange, withMaster) {
+    const sel = el('select'); sel.id = id;
+    for (let i = withMaster ? 0 : 1; i < st.mixer.length; i++) { const op = el('option', '', insertLabel(i) + (st.mixer[i].ret ? ' ↩' : '')); op.value = i; if (i === value) op.selected = true; sel.appendChild(op); }
+    sel.onchange = () => onChange(+sel.value);
+    return sel;
+  }
+
+  // настройки трека: имя, цвет, громкость, панорама, канал, дублировать, удалить
+  function openTrackSheet(ti) {
+    const tr = st.tracks[ti]; if (!tr) return;
+    selectTrack(ti);
+    const ch = st.mixer[tr.insert];
+    openSheet(tr.name, 'Трек ' + String(ti + 1).padStart(2, '0'), (sh) => {
+      const ctl = el('div', 'sheet-ctl');
+      const nm = el('input', 'sheet-name'); nm.type = 'text'; nm.value = tr.name; nm.maxLength = 40; nm.id = 'trackName' + ti;
+      nm.onchange = () => { tr.name = nm.value.trim() || tr.name; renderPlaylist(); renderBrowser(); syncRecPane(); };
+      ctl.appendChild(sheetRow('Название', nm));
+      const cols = el('div', 'swatches');
+      for (let c = 1; c <= 6; c++) {
+        const b = el('button', 'swatch' + (tr.color === c ? ' on' : '')); b.style.background = 'var(--clip-' + c + ')';
+        b.setAttribute('aria-label', 'Цвет ' + c); b.setAttribute('aria-pressed', String(tr.color === c));
+        b.onclick = (e) => { e.preventDefault(); tr.color = c; cols.querySelectorAll('.swatch').forEach((x, n) => { x.classList.toggle('on', n + 1 === c); x.setAttribute('aria-pressed', String(n + 1 === c)); }); renderPlaylist(); Vox.history.schedule(); };
+        cols.appendChild(b);
+      }
+      ctl.appendChild(sheetRow('Цвет', cols));
+      const vbox = el('span', 'sheet-val'), out = el('output', '', dbText(ch.vol));
+      vbox.append(hslider({ min: 0, max: 1, value: ch.vol, def: 0.8, label: 'Громкость', onInput: (v) => { ch.vol = v; out.textContent = dbText(v); Vox.updateMix(); renderHeadsLater(); } }), out);
+      ctl.appendChild(sheetRow('Громкость', vbox));
+      const pbox = el('span', 'sheet-val'), pout = el('output', '', panText(ch.pan));
+      pbox.append(hslider({ min: -1, max: 1, value: ch.pan, def: 0, cls: 'center', label: 'Панорама', onInput: (v) => { ch.pan = v; pout.textContent = panText(v); Vox.updateMix(); renderHeadsLater(); } }), pout);
+      ctl.appendChild(sheetRow('Панорама', pbox));
+      ctl.appendChild(sheetRow('Канал микшера', insertSelect('trackInsert' + ti, tr.insert, (v) => { tr.insert = v; Vox.routeMonitor(); closeSheet(); renderPlaylist(); selectTrack(ti); })));
+      const acts = el('div', 'sheet-acts three');
+      const fx = el('button', 'sheet-btn primary', 'Эффекты'); fx.onclick = () => { closeSheet(); openDrawer('fx'); };
+      const dup = el('button', 'sheet-btn', 'Дублировать'); dup.onclick = () => { closeSheet(); Vox.duplicateTrack(ti); };
+      const del = el('button', 'sheet-btn danger', 'Удалить'); del.title = 'Удалить трек вместе с клипами (Ctrl+Z — вернуть)';
+      del.disabled = st.tracks.length < 2;
+      del.onclick = () => { closeSheet(); deleteTrack(ti); };
+      acts.append(fx, dup, del);
+      sh.append(ctl, acts);
+      return fx;
+    });
+  }
+  let headsTimer = 0;
+  function renderHeadsLater() { clearTimeout(headsTimer); headsTimer = setTimeout(renderPlaylist, 120); }
+  function deleteTrack(ti) {
+    if (st.tracks.length < 2) return;
+    const tr = st.tracks[ti];
+    st.tracks.splice(ti, 1);
+    st.selectedTrack = Math.min(st.selectedTrack, st.tracks.length - 1); st.selectedClip = null;
+    if (tr.armed) Vox.routeMonitor();
+    Vox.hint('Трек «' + tr.name + '» удалён. Ctrl+Z — вернуть');
+    Vox.emit('tracks'); Vox.history.schedule();
+  }
+
+  /* ------------------------------ НИЖНЯЯ ПАНЕЛЬ ТРЕКА ------------------------------ */
+  const drawer = $('drawer'), appEl = $('app');
+  const mobileMQ = matchMedia('(max-width: 820px)');
+  Vox.isMobile = () => mobileMQ.matches;
+  function openDrawer(pane) {
+    drawer.dataset.pane = pane; drawer.classList.remove('collapsed');
+    drawer.querySelectorAll('.dr-tab').forEach((t) => { const on = t.dataset.pane === pane; t.classList.toggle('on', on); t.setAttribute('aria-selected', String(on)); });
+    $('drClose').setAttribute('aria-expanded', 'true');
+    if (Vox.isMobile() && appEl.dataset.view !== pane) setView(pane);
+    renderDrawer();
+  }
+  function renderDrawer() {
+    const p = drawer.dataset.pane;
+    if (p === 'fx') renderFxPane();
+    else if (p === 'beat' && !$('paneBeat').firstChild) buildRack($('paneBeat'));
+    else if (p === 'rec') syncRecPane();
+  }
+  drawer.querySelectorAll('.dr-tab').forEach((t) => (t.onclick = () => openDrawer(t.dataset.pane)));
+  $('drClose').onclick = () => {
+    const c = drawer.classList.toggle('collapsed'); $('drClose').setAttribute('aria-expanded', String(!c));
+    requestAnimationFrame(renderPlaylist);
+  };
+
+  /* ---- Эффекты: цепочка выбранного канала, громкость/панорама, посылы и маршрут ---- */
+  let fxpVol = null, fxpMeter = null;
+  function renderFxPane() {
+    const pane = $('paneFx'); pane.innerHTML = ''; fxpVol = null;
+    const i = clamp(st.selectedInsert, 0, st.mixer.length - 1), ch = st.mixer[i];
+    // выбор канала — в шапке панели
+    const dc = $('drChannel'); dc.innerHTML = '';
+    dc.appendChild(el('span', 'dr-ch-label', 'Канал'));
+    dc.appendChild(insertSelect('fxChannel', i, (v) => { st.selectedInsert = v; renderFxPane(); renderBrowser(); }, true));
+
+    // колонка канала
+    const col = el('div', 'fxp-ch');
+    const nm = el('div', 'fxp-name', ch.name); nm.title = 'Двойной клик — переименовать канал';
+    nm.ondblclick = () => renameInline(nm, ch.name, (v) => { ch.name = v; renderFxPane(); renderPlaylist(); });
+    col.appendChild(nm);
+    const users = st.tracks.filter((t) => t.insert === i).map((t) => t.name);
+    col.appendChild(el('div', 'fxp-sub', i === 0 ? 'Выход студии' : ch.ret ? 'Канал-возврат (посыл)' : users.length ? 'Треки: ' + users.join(', ') : 'Канал микшера ' + i));
+    const vrow = el('div', 'fxp-row'); const vout = el('output', 'fxp-db', dbText(ch.vol));
+    fxpVol = hslider({ min: 0, max: 1, value: ch.vol, def: 0.8, label: 'Громкость канала', onInput: (v) => { ch.vol = v; vout.textContent = dbText(v); Vox.updateMix(); if (i === 0) syncMaster(); else renderHeadsLater(); } });
+    vrow.append(fxpVol, vout); col.appendChild(vrow);
+    const prow = el('div', 'fxp-row');
+    prow.appendChild(panKnob(ch, () => renderHeadsLater()).el);
+    if (i > 0) {
+      const m = el('button', 'sq' + (ch.mute ? ' on' : ''), 'M'); m.title = 'Mute канала'; m.setAttribute('aria-pressed', String(!!ch.mute));
+      m.onclick = () => { ch.mute = !ch.mute; m.classList.toggle('on', ch.mute); m.setAttribute('aria-pressed', String(ch.mute)); Vox.updateMix(); };
+      const so = el('button', 'sq solo' + (ch.solo ? ' on' : ''), 'S'); so.title = 'Solo канала'; so.setAttribute('aria-pressed', String(!!ch.solo));
+      so.onclick = () => { ch.solo = !ch.solo; so.classList.toggle('on', ch.solo); so.setAttribute('aria-pressed', String(ch.solo)); Vox.updateMix(); renderHeadsLater(); };
+      prow.append(m, so);
+    }
+    fxpMeter = el('canvas', 'fxp-meter'); fxpMeter.width = 200; fxpMeter.height = 6;
+    col.append(prow, fxpMeter);
+    pane.appendChild(col);
+
+    // цепочка эффектов
+    const chain = el('div', 'fxp-chain');
+    const head = el('div', 'fxp-title'); head.append(el('span', '', 'Цепочка эффектов'), el('span', 'fxp-hint', 'по порядку, как звучит'));
+    chain.appendChild(head);
+    const list = el('div', 'fx-cards');
+    let n = 0;
+    ch.fx.forEach((s, k) => {
+      if (!s) return; n++;
+      const card = el('div', 'fx-card' + (s.bypass ? ' bypass' : ''));
+      card.style.setProperty('--fxc', 'var(--fx-' + s.type + ', var(--accent))');
+      const pw = el('button', 'fx-pow' + (s.bypass ? '' : ' on')); pw.appendChild(ico('power'));
+      pw.title = s.bypass ? 'Включить эффект' : 'Выключить (bypass)'; pw.setAttribute('aria-label', (s.bypass ? 'Включить ' : 'Выключить ') + Vox.FX[s.type].title); pw.setAttribute('aria-pressed', String(!s.bypass));
+      pw.onclick = (e) => { e.stopPropagation(); Vox.toggleBypass(i, k); };
+      const open = el('button', 'fx-open');
+      open.append(el('span', 'fx-num', String(n)), el('span', 'fx-name', Vox.FX[s.type].title), el('span', 'fx-sub', fxSummary(s)));
+      open.title = 'Открыть окно эффекта'; open.onclick = () => openPlugin(i, k);
+      const rm = el('button', 'fx-rm'); rm.appendChild(ico('close')); rm.title = 'Убрать эффект из цепочки'; rm.setAttribute('aria-label', 'Убрать ' + Vox.FX[s.type].title);
+      rm.onclick = (e) => { e.stopPropagation(); closeWindow('plug-' + i + '-' + k); Vox.setFx(i, k, null); };
+      card.append(pw, open, rm); list.appendChild(card);
+    });
+    if (ch.fx.indexOf(null) >= 0) {
+      const add = el('label', 'fx-card add');
+      add.appendChild(ico('plus'));
+      const sel = el('select'); sel.id = 'fxAdd'; sel.setAttribute('aria-label', 'Добавить эффект');
+      const o0 = el('option', '', 'Добавить эффект'); o0.value = ''; sel.appendChild(o0);
+      Vox.FX_ORDER.forEach((tp) => { const op = el('option', '', Vox.FX[tp].title); op.value = tp; sel.appendChild(op); });
+      sel.onchange = () => { if (sel.value) addFx(i, sel.value); };
+      add.appendChild(sel); list.appendChild(add);
+    }
+    chain.appendChild(list);
+    chain.appendChild(el('div', 'fxp-note', ch.ret ? 'Канал-возврат: сюда приходят посылы с треков. У эффекта держи Dry 0 %, Wet 100 %.'
+      : 'Автотюн ставь первым, до VocalChain. Тональность автотюнов — в шапке (KEY).'));
+    pane.appendChild(chain);
+
+    // посылы и маршрут
+    const sends = el('div', 'fxp-sends');
+    sends.appendChild(el('div', 'fxp-title', 'Посылы и маршрут'));
+    if (i === 0) sends.appendChild(el('div', 'fxp-note', 'Мастер — выход студии. Сюда приходят все треки и посылы.'));
+    else {
+      const tm = el('button', 'route-row' + (Vox.isRouted(i, 0) ? ' on' : ''));
+      tm.append(el('span', 'rr-led'), el('span', '', 'Выход в мастер'));
+      tm.setAttribute('aria-pressed', String(Vox.isRouted(i, 0)));
+      tm.title = 'Прямой выход канала в мастер. Выключи, если канал идёт только через шину';
+      tm.onclick = () => Vox.setRoute(i, 0, !Vox.isRouted(i, 0));
+      sends.appendChild(tm);
+      const targets = st.mixer.map((c, j) => j).filter((j) => j > 0 && j !== i && (st.mixer[j].ret || Vox.isRouted(i, j)));
+      targets.forEach((j) => {
+        const row = el('div', 'send-row' + (st.mixer[j].ret ? ' ret' : ''));
+        const can = Vox.isRouted(i, j) || Vox.canRoute(i, j);
+        const lab = el('span', 'sr-name', st.mixer[j].name); lab.title = insertLabel(j);
+        const v = (ch.sends && ch.sends[j]) || 0, out = el('output', 'sr-db', sendText(v));
+        const sl = hslider({ min: 0, max: 1, value: v, def: Vox.UNITY_SEND, cls: 'send', label: 'Посыл в ' + st.mixer[j].name,
+          onInput: (x) => { const keep = !st.mixer[j].ret; Vox.setSend(i, j, keep ? Math.max(x, 0.0005) : x); out.textContent = sendText(x); } });
+        sl.disabled = !can; if (!can) row.title = 'Нельзя: получится петля';
+        row.append(lab, sl, out);
+        if (!st.mixer[j].ret) { const rm = el('button', 'sr-rm'); rm.appendChild(ico('close')); rm.title = 'Убрать маршрут'; rm.setAttribute('aria-label', 'Убрать маршрут в ' + st.mixer[j].name); rm.onclick = () => Vox.setRoute(i, j, false); row.appendChild(rm); }
+        sends.appendChild(row);
+      });
+      const more = el('div', 'send-add');
+      const to = el('select'); to.id = 'routeTo'; to.setAttribute('aria-label', 'Направить канал в другой');
+      const t0 = el('option', '', 'В канал…'); t0.value = ''; to.appendChild(t0);
+      st.mixer.forEach((c, j) => { if (j > 0 && j !== i && !c.ret && !Vox.isRouted(i, j) && Vox.canRoute(i, j)) { const o = el('option', '', insertLabel(j)); o.value = j; to.appendChild(o); } });
+      to.onchange = () => { if (to.value) { Vox.setRoute(i, +to.value, true); Vox.hint('Маршрут: ' + insertLabel(i) + ' → ' + insertLabel(+to.value)); } };
+      const addRet = el('select'); addRet.id = 'addReturn'; addRet.setAttribute('aria-label', 'Добавить канал-возврат');
+      [['', '+ Посыл…'], ['reverb', 'Reverb'], ['delay', 'Delay'], ['chorus', 'Chorus']].forEach(([val, l]) => { const o = el('option', '', l); o.value = val; addRet.appendChild(o); });
+      addRet.onchange = () => { if (!addRet.value) return; const b = Vox.addReturn(addRet.value); Vox.hint('Добавлен канал-возврат ' + insertLabel(b) + '. Уровень посыла — ползунком.'); };
+      more.append(to, addRet); sends.appendChild(more);
+    }
+    pane.appendChild(sends);
+  }
+  function fxSummary(s) {
+    const p = s.params;
+    if (s.type === 'autotune') return Vox.NOTE_NAMES[p.key] + ' ' + (SCALE_SHORT[p.scale] || '') + ' · ' + Math.round(p.speed) + ' мс';
+    if (s.type === 'vocalchain') return (['Мейн', 'Даблы', 'Бэки'][p.type] || 'тип ' + (p.type + 1)) + (p.variant ? ' · вариант ' + (p.variant + 1) : '');
+    if (s.type === 'reverb') return (+p.decay).toFixed(1) + ' с · wet ' + Math.round(p.wet * 100) + '%';
+    if (s.type === 'delay') return p.sync + ' · fb ' + Math.round(p.feedback * 100) + '%';
+    if (s.type === 'clipper') return 'потолок ' + (+p.ceiling).toFixed(1) + ' дБ';
+    if (s.type === 'chorus') return 'mix ' + Math.round(p.mix * 100) + '%';
+    return '';
+  }
+  Vox.on('mixer', () => { renderPlaylist(); if (drawer.dataset.pane === 'fx') renderFxPane(); renderBrowser(); syncMaster(); });
+
+  /* ---- Запись ---- */
+  function syncRecPane() {
+    const sel = $('recTrack'); sel.innerHTML = '';
+    const none = el('option', '', '— выбери трек —'); none.value = -1; sel.appendChild(none);
+    st.tracks.forEach((t, k) => { const o = el('option', '', String(k + 1).padStart(2, '0') + ' ' + t.name); o.value = k; if (t.armed) o.selected = true; sel.appendChild(o); });
+  }
+  $('recTrack').addEventListener('change', (e) => armTrack(+e.target.value));
+  $('recBig').onclick = record;
 
   /* ------------------------------ CHANNEL RACK ------------------------------ */
   let rackSteps = [];
   function buildRack(body) {
-    body.innerHTML = ''; rackSteps = []; lastStep = -1; closeRackSheet();
+    body.innerHTML = ''; rackSteps = []; lastStep = -1; closeSheet();
     if (Vox.isMobile()) { buildRackMobile(body); return; }
     const r = el('div', 'rack');
     st.rack.channels.forEach((c, ci) => {
@@ -462,212 +841,30 @@
     c.mute = mute; ui.led.classList.toggle('off', mute); ui.ledBtn.setAttribute('aria-pressed', String(!mute)); ui.row.classList.toggle('muted', mute);
   }
 
-  // Панель канала (bottom sheet): прослушать, вкл/выкл, громкость, канал микшера.
-  let rackSheet = null;
-  function closeRackSheet() {
-    if (!rackSheet) return;
-    const s = rackSheet; rackSheet = null; s.back.remove(); document.removeEventListener('keydown', s.key, true);
-    if (s.opener && document.contains(s.opener)) s.opener.focus();
-  }
+  // Панель канала Rack: прослушать, вкл/выкл, громкость, канал микшера.
   function openRackSheet(ci, ui) {
-    closeRackSheet();
     const c = st.rack.channels[ci];
-    const back = el('div', 'sheet-back'), sh = el('div', 'sheet');
-    sh.setAttribute('role', 'dialog'); sh.setAttribute('aria-modal', 'true'); sh.setAttribute('aria-label', 'Канал ' + c.name);
-    const head = el('div', 'sheet-head');
-    head.append(el('div', 'sheet-grip'), el('span', 'sheet-title', c.name), el('span', 'sheet-sub', Vox.DRUM_TYPES[c.type] || c.type));
-    const x = el('button', 'w-close', '×'); x.title = 'Закрыть'; x.setAttribute('aria-label', 'Закрыть панель'); x.onclick = closeRackSheet;
-    head.appendChild(x);
-
-    const acts = el('div', 'sheet-acts');
-    const play = el('button', 'sheet-btn primary', '▶ Прослушать'); play.title = 'Прослушать звук';
-    play.onclick = () => Vox.previewDrum(ci);
-    const mute = el('button', 'sheet-btn tog' + (c.mute ? '' : ' on'), c.mute ? 'Выключен' : 'Включён');
-    mute.title = 'Вкл/выкл канал'; mute.setAttribute('aria-pressed', String(!c.mute));
-    mute.onclick = () => {
-      setRackMute(c, ui, !c.mute);
-      mute.classList.toggle('on', !c.mute); mute.textContent = c.mute ? 'Выключен' : 'Включён'; mute.setAttribute('aria-pressed', String(!c.mute));
-    };
-    acts.append(play, mute);
-
-    // регуляторы: горизонтальный фейдер громкости (удобнее пальцем, чем ручка) и канал микшера
-    const ctl = el('div', 'sheet-ctl');
-    const volRow = el('label', 'sheet-row'); volRow.appendChild(el('span', '', 'Громкость'));
-    const vbox = el('span', 'sheet-val'), vol = el('input', 'hfader'), out = el('output', '', Math.round(c.vol * 100) + '%');
-    vol.type = 'range'; vol.min = 0; vol.max = 100; vol.step = 1; vol.value = Math.round(c.vol * 100); vol.setAttribute('aria-label', 'Громкость ' + c.name);
-    const showVol = () => { vol.style.setProperty('--p', vol.value / 100); out.textContent = vol.value + '%'; };
-    vol.oninput = () => { c.vol = vol.value / 100; showVol(); ui.meta.textContent = rackMeta(c); };
-    vol.ondblclick = () => { vol.value = 80; vol.oninput(); };
-    showVol(); vbox.append(vol, out); volRow.appendChild(vbox);
-    const insRow = el('label', 'sheet-row'); insRow.appendChild(el('span', '', 'Канал микшера'));
-    const sel = el('select'); sel.id = 'rackInsert' + ci; sel.setAttribute('aria-label', 'Канал микшера для ' + c.name);
-    for (let i = 1; i < st.mixer.length; i++) { const op = el('option', '', insertLabel(i)); op.value = i; if (i === c.insert) op.selected = true; sel.appendChild(op); }
-    sel.onchange = () => { c.insert = +sel.value; ui.meta.textContent = rackMeta(c); };
-    insRow.appendChild(sel);
-    ctl.append(volRow, insRow);
-
-    sh.append(head, acts, ctl); back.appendChild(sh); document.body.appendChild(back);
-    back.addEventListener('pointerdown', (e) => { if (e.target === back) closeRackSheet(); });
-    const key = (e) => { if (e.key === 'Escape') { e.stopPropagation(); closeRackSheet(); } };
-    document.addEventListener('keydown', key, true);
-    rackSheet = { back, key, opener: document.activeElement };
-    play.focus();
-  }
-
-  /* ------------------------------ МИКШЕР ------------------------------ */
-  // Маршрут как в FL Studio: внизу каждого канала — стрелка «направить сюда выбранный канал» и ручка уровня
-  // посыла (0–100 %, 100 % = 0 дБ). На мастере стрелка включает/выключает прямой выход выбранного канала в мастер.
-  function routeBox(i, src, knobsOf, syncSend) {
-    const box = el('div', 's-route');
-    if (i === src) { box.appendChild(el('span', 's-route-src', i === 0 ? 'ВЫХОД' : 'ИСТОЧНИК')); return box; }
-    if (src === 0) return box; // мастер никуда не направляется
-    const routed = Vox.isRouted(src, i), can = i === 0 || routed || Vox.canRoute(src, i);
-    const btn = el('button', 'route-btn' + (routed ? ' on' : ''));
-    btn.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 13 3 7h3V3h4v4h3z"/></svg>';
-    btn.setAttribute('aria-pressed', String(routed));
-    const to = i === 0 ? 'мастер' : insertLabel(i);
-    btn.title = !can ? 'Нельзя: получится петля (' + insertLabel(i) + ' уже идёт в ' + insertLabel(src) + ')'
-      : (routed ? 'Убрать маршрут ' : 'Направить ') + insertLabel(src) + ' → ' + to;
-    btn.setAttribute('aria-label', btn.title);
-    btn.disabled = !can;
-    btn.onclick = (e) => {
-      e.stopPropagation();
-      if (!Vox.setRoute(src, i, !routed)) Vox.hint('Маршрут не создан: получилась бы петля');
-      else Vox.hint(routed ? 'Маршрут убран: ' + insertLabel(src) + ' ↛ ' + to : 'Маршрут: ' + insertLabel(src) + ' → ' + to + (i === 0 ? '' : ', уровень — ручкой рядом'));
-    };
-    box.appendChild(btn);
-    if (routed && i > 0) {
-      const U = Vox.UNITY_SEND, v = Math.min(U, st.mixer[src].sends[i] || 0);
-      const kn = knob({ small: true, min: 0, max: U, value: v, def: U, step: U / 100, label: '',
-        fmt: (x) => Math.round(x / U * 100) + '%', onInput: (x) => { Vox.setSend(src, i, Math.max(x, 0.0005)); syncSend(src, i, x, kn); } });
-      kn.el.classList.add('send', 'route-level'); kn.el.title = 'Уровень посыла ' + insertLabel(src) + ' → ' + to + ' (двойной клик — 100 %)';
-      (knobsOf[src + '>' + i] = knobsOf[src + '>' + i] || []).push(kn);
-      box.appendChild(kn.el);
-    }
-    return box;
-  }
-  let mixerMeters = [];
-  function fader(ch, onChange) {
-    const f = el('div', 'fader'); const cap = el('div', 'cap'); f.appendChild(cap);
-    f.tabIndex = 0; f.setAttribute('role', 'slider'); f.setAttribute('aria-label', 'Громкость');
-    const show = () => { cap.style.top = (1 - ch.vol) * 100 + '%'; };
-    const setFromY = (y) => { const r = f.getBoundingClientRect(); ch.vol = clamp(1 - (y - r.top) / r.height, 0, 1); show(); onChange(); };
-    let sy, sv;
-    f.addEventListener('pointerdown', (e) => {
-      f.setPointerCapture(e.pointerId); sy = e.clientY; sv = ch.vol;
-      if (e.target === f) setFromY(e.clientY), (sv = ch.vol);
-      e.preventDefault();
-    });
-    f.addEventListener('pointermove', (e) => {
-      if (!f.hasPointerCapture(e.pointerId)) return;
-      ch.vol = clamp(sv + (sy - e.clientY) / (e.shiftKey ? 600 : 150), 0, 1); show(); onChange();
-    });
-    f.addEventListener('dblclick', () => { ch.vol = 0.8; show(); onChange(); });
-    f.addEventListener('keydown', (e) => {
-      const d = e.key === 'ArrowUp' ? 0.02 : e.key === 'ArrowDown' ? -0.02 : 0;
-      if (d) { e.preventDefault(); ch.vol = clamp(ch.vol + d, 0, 1); show(); onChange(); }
-    });
-    show(); return f;
-  }
-  const dbText = (v) => { const d = Vox.faderDb(v); return d === -Infinity ? '−∞' : (d > 0 ? '+' : '') + d.toFixed(1); };
-
-  function renderMixer() {
-    const win = wins.mixer; if (!win) return;
-    const body = win.body; body.innerHTML = ''; mixerMeters = [];
-    win.sub.textContent = 'Канал ' + insertLabel(st.selectedInsert);
-    const mx = el('div', 'mixer'), strips = el('div', 'strips');
-    const buses = st.mixer.map((c, b) => (c.ret ? b : -1)).filter((b) => b > 0);
-    const busShort = (b) => { const f = st.mixer[b].fx.find((x) => x); return f ? Vox.FX[f.type].title.slice(0, 3) : 'S' + b; };
-    const src = st.selectedInsert, knobsOf = {}; // ручки посылов «канал>куда», чтобы обе копии показывали одно значение
-    const syncSend = (a, b, x, from) => (knobsOf[a + '>' + b] || []).forEach((k) => { if (k !== from) k.set(x); });
-    st.mixer.forEach((ch, i) => {
-      const feeds = i > 0 && src > 0 && i !== src && Vox.isRouted(i, src); // этот канал приходит в выбранный
-      const s = el('div', 'strip' + (i === 0 ? ' master' : '') + (ch.ret ? ' ret' : '') + (i === src ? ' selected' : '')
-        + (i !== src && src > 0 && Vox.isRouted(src, i) ? ' routed' : '') + (feeds ? ' feeds' : ''));
-      s.appendChild(el('div', 's-num', i === 0 ? 'M' : String(i)));
-      const nm = el('div', 's-name', ch.name); nm.title = 'Двойной клик, чтобы переименовать';
-      nm.ondblclick = (e) => {
-        e.stopPropagation(); const inp = el('input'); inp.value = ch.name; inp.style.width = '100%'; inp.style.fontSize = '11px';
-        nm.replaceWith(inp); inp.focus(); inp.select();
-        const done = () => { ch.name = inp.value || ch.name; renderMixer(); renderPlaylist(); };
-        inp.onblur = done; inp.onkeydown = (k) => { if (k.key === 'Enter') inp.blur(); };
+    openSheet(c.name, Vox.DRUM_TYPES[c.type] || c.type, (sh) => {
+      const acts = el('div', 'sheet-acts');
+      const play = el('button', 'sheet-btn primary', '▶ Прослушать'); play.title = 'Прослушать звук';
+      play.onclick = () => Vox.previewDrum(ci);
+      const mute = el('button', 'sheet-btn tog' + (c.mute ? '' : ' on'), c.mute ? 'Выключен' : 'Включён');
+      mute.title = 'Вкл/выкл канал'; mute.setAttribute('aria-pressed', String(!c.mute));
+      mute.onclick = () => {
+        setRackMute(c, ui, !c.mute);
+        mute.classList.toggle('on', !c.mute); mute.textContent = c.mute ? 'Выключен' : 'Включён'; mute.setAttribute('aria-pressed', String(!c.mute));
       };
-      s.appendChild(nm);
-      const pan = knob({ small: true, min: -1, max: 1, value: ch.pan, def: 0, step: 0.01,
-        fmt: (v) => (Math.abs(v) < 0.01 ? 'C' : (v < 0 ? 'L' : 'R') + Math.round(Math.abs(v) * 100)),
-        onInput: (v) => { ch.pan = v; Vox.updateMix(); }, label: '' });
-      s.appendChild(pan.el);
-      // посылы на каналы-возвраты
-      const sb = el('div', 's-sends');
-      if (i > 0 && !ch.ret) buses.forEach((b) => {
-        const v = (ch.sends && ch.sends[b]) || 0;
-        const kn = knob({ small: true, min: 0, max: 1, value: v, def: 0, step: 0.01, label: busShort(b),
-          fmt: (x) => { const d = Vox.sendDb(x); return d === -Infinity ? '−∞' : Math.round(d); },
-          onInput: (x) => { Vox.setSend(i, b, x); syncSend(i, b, x, kn); } });
-        (knobsOf[i + '>' + b] = knobsOf[i + '>' + b] || []).push(kn);
-        kn.el.classList.add('send'); kn.el.title = 'Посыл в ' + insertLabel(b);
-        sb.appendChild(kn.el);
-      });
-      else if (ch.ret) sb.appendChild(el('div', 's-retlabel', 'ВОЗВРАТ'));
-      s.appendChild(sb);
-      const fw = el('div', 'fader-wrap');
-      const db = el('div', 's-db', dbText(ch.vol));
-      fw.appendChild(fader(ch, () => { db.textContent = dbText(ch.vol); Vox.updateMix(); }));
-      const mc = el('canvas', 'strip-meter'); mc.width = 12; mc.height = 128; fw.appendChild(mc); mixerMeters[i] = mc;
-      s.appendChild(fw); s.appendChild(db);
-      if (i > 0) {
-        const b = el('div', 's-btns');
-        const m = el('button', 'sq' + (ch.mute ? ' on' : ''), 'M'); m.title = 'Mute';
-        m.onclick = (e) => { e.stopPropagation(); ch.mute = !ch.mute; m.classList.toggle('on', ch.mute); Vox.updateMix(); };
-        const so = el('button', 'sq solo' + (ch.solo ? ' on' : ''), 'S'); so.title = 'Solo';
-        so.onclick = (e) => { e.stopPropagation(); ch.solo = !ch.solo; so.classList.toggle('on', ch.solo); Vox.updateMix(); };
-        b.append(m, so); s.appendChild(b);
-      }
-      s.appendChild(routeBox(i, src, knobsOf, syncSend));
-      s.addEventListener('pointerdown', (e) => {
-        if (e.target.closest('.fader, .knob-dial, button, input, .s-route')) return;
-        if (st.selectedInsert !== i) { st.selectedInsert = i; renderMixer(); renderBrowser(); }
-      });
-      strips.appendChild(s);
+      acts.append(play, mute);
+      const ctl = el('div', 'sheet-ctl');
+      const vbox = el('span', 'sheet-val'), out = el('output', '', Math.round(c.vol * 100) + '%');
+      vbox.append(hslider({ min: 0, max: 1, value: c.vol, def: 0.8, label: 'Громкость ' + c.name,
+        onInput: (v) => { c.vol = v; out.textContent = Math.round(v * 100) + '%'; ui.meta.textContent = rackMeta(c); } }), out);
+      ctl.appendChild(sheetRow('Громкость', vbox));
+      ctl.appendChild(sheetRow('Канал микшера', insertSelect('rackInsert' + ci, c.insert, (v) => { c.insert = v; ui.meta.textContent = rackMeta(c); })));
+      sh.append(acts, ctl);
+      return play;
     });
-    // добавить канал-возврат
-    const add = el('div', 'strip add-ret');
-    add.appendChild(el('div', 's-num', '+'));
-    add.appendChild(el('div', 's-name', 'Посыл'));
-    const sel = el('select'); sel.id = 'addReturn'; sel.setAttribute('aria-label', 'Добавить канал-возврат');
-    [['', 'Добавить…'], ['reverb', 'Reverb'], ['delay', 'Delay'], ['chorus', 'Chorus']].forEach(([v, l]) => { const o = el('option', '', l); o.value = v; sel.appendChild(o); });
-    sel.onchange = () => { if (!sel.value) return; const b = Vox.addReturn(sel.value); st.selectedInsert = b; renderMixer(); Vox.hint('Добавлен канал-возврат ' + insertLabel(b) + '. Посыл на него — ручки над фейдерами.'); };
-    add.appendChild(sel);
-    add.appendChild(el('p', 's-addnote', 'Общий ревер или дилей для нескольких дорожек'));
-    strips.appendChild(add);
-    mx.appendChild(strips);
-
-    // FX-слоты выбранного канала
-    const fr = el('div', 'fx-rack');
-    const t = el('div', 'fr-title'); t.append('Эффекты: '); t.appendChild(el('b', '', insertLabel(st.selectedInsert)));
-    fr.appendChild(t);
-    const i = st.selectedInsert;
-    st.mixer[i].fx.forEach((s, k) => {
-      const row = el('div', 'fx-slot');
-      const led = el('button', 'led' + (!s ? ' none' : s.bypass ? ' off' : ''));
-      led.title = s ? (s.bypass ? 'Включить эффект' : 'Выключить (bypass)') : 'Пустой слот';
-      led.setAttribute('aria-label', 'Bypass слота ' + (k + 1));
-      led.onclick = () => { if (s) Vox.toggleBypass(i, k); };
-      const sel = el('select'); sel.id = 'fxSlot' + k; sel.setAttribute('aria-label', 'Эффект в слоте ' + (k + 1));
-      const none = el('option', '', '— Слот ' + (k + 1) + ' —'); none.value = ''; sel.appendChild(none);
-      Vox.FX_ORDER.forEach((tp) => { const op = el('option', '', Vox.FX[tp].title); op.value = tp; if (s && s.type === tp) op.selected = true; sel.appendChild(op); });
-      sel.onchange = () => { closeWindow('plug-' + i + '-' + k); Vox.setFx(i, k, sel.value || null); if (sel.value) openPlugin(i, k); };
-      const op = el('button', 'open', '⚙'); op.title = 'Открыть окно плагина'; op.disabled = !s;
-      op.onclick = () => openPlugin(i, k);
-      row.append(led, sel, op); fr.appendChild(row);
-    });
-    fr.appendChild(el('div', 'fx-note', st.mixer[i].ret
-      ? 'Канал-возврат: сюда приходят посылы с других каналов. У эффекта Dry 0%, Wet 100%.'
-      : 'Порядок важен: автотюн ставь первым, до VocalChain. Ручки над фейдерами — посылы в общий ревер и дилей.'));
-    mx.appendChild(fr);
-    body.appendChild(mx);
   }
-  Vox.on('mixer', () => { renderMixer(); renderBrowser(); });
 
   /* ------------------------------ ОКНА ПЛАГИНОВ ------------------------------ */
   const pct = (v) => Math.round(v * 100) + '%';
@@ -1383,21 +1580,7 @@
   // если звук не играет, индикаторы не приходят — EQ всё равно обновляем
   setInterval(() => vcBridges.forEach((b) => b.idle()), 120);
 
-  /* ------------------------------ открытие окон ------------------------------ */
-  const OPENERS = {
-    rack: () => {
-      const W = layer.clientWidth;
-      openWindow('rack', { title: 'Channel Rack', sub: 'Паттерн 1', w: 600, x: W - 610, y: 40, build: buildRack });
-    },
-    mixer: () => {
-      const W = layer.clientWidth, H = layer.clientHeight;
-      const w = Math.min(980, W - 230);
-      openWindow('mixer', { title: 'Микшер', w: Math.max(320, w), h: 452, x: Math.max(0, W - Math.max(320, w) - 10), y: Math.max(0, H - 462), build: () => {} });
-      renderMixer();
-    }
-  };
-
-  /* ------------------------------ АНИМАЦИЯ: курсор, LCD, индикаторы ------------------------------ */
+  /* ------------------------------ АНИМАЦИЯ: курсор, таймер, индикаторы ------------------------------ */
   const playhead = $('playhead'), lcd = $('lcdTime');
   const mm = $('masterMeter'), micM = $('micMeter');
   const tdBuf = new Float32Array(512);
@@ -1407,15 +1590,19 @@
   const meterColors = {};
   function meterColor(name) { return meterColors[name] || (meterColors[name] = getComputedStyle(document.documentElement).getPropertyValue(name).trim()); }
   function levelToFrac(v) { if (v <= 0) return 0; const db = 20 * Math.log10(v); return clamp((db + 60) / 63, 0, 1); }
-  function drawBar(g, x, y, w, h, frac, vertical) {
+  function drawBar(g, x, y, w, h, frac) {
     const segs = [[0, 0.75, '--meter-lo'], [0.75, 0.92, '--meter-mid'], [0.92, 1, '--meter-hi']];
     segs.forEach(([a, b, c]) => {
       if (frac <= a) return; const e = Math.min(frac, b);
-      g.fillStyle = meterColor(c);
-      if (vertical) g.fillRect(x, y + h - e * h, w, (e - a) * h);
-      else g.fillRect(x + a * w, y, (e - a) * w, h);
+      g.fillStyle = meterColor(c); g.fillRect(x + a * w, y, (e - a) * w, h);
     });
   }
+  function meterTo(cv, i) {
+    const n = Vox.live[i]; if (!cv || !n) return;
+    const v = Math.max(smooth('l' + i, peakOf(n.aL)), smooth('r' + i, peakOf(n.aR)));
+    const g = cv.getContext('2d'); g.clearRect(0, 0, cv.width, cv.height); drawBar(g, 0, 0, cv.width, cv.height, levelToFrac(v));
+  }
+  const fmtTime = (sec) => { const m = Math.floor(sec / 60), s = sec - m * 60; return String(m).padStart(2, '0') + ':' + s.toFixed(1).padStart(4, '0'); };
   let lastStep = -1;
   function frame() {
     const beat = Vox.currentBeat();
@@ -1424,8 +1611,8 @@
       const x = beat * ppb, sl = scroller.scrollLeft, vw = scroller.clientWidth;
       if (x > sl + vw - 60 || x < sl) scroller.scrollLeft = Math.max(0, x - 80);
     }
-    const bar = Math.floor(beat / 4) + 1, bt = Math.floor(beat % 4) + 1, sx = Math.floor((beat * 4) % 4) + 1;
-    lcd.textContent = bar + ':' + bt + ':' + String(sx).padStart(2, '0');
+    lcd.textContent = fmtTime(beat * 60 / st.bpm);
+    lcd.title = 'Позиция: такт ' + (Math.floor(beat / 4) + 1) + ', доля ' + (Math.floor(beat % 4) + 1);
 
     const step = st.playing ? Math.floor(beat * 4) % 16 : -1;
     if (step !== lastStep) {
@@ -1434,26 +1621,18 @@
     }
 
     if (Vox.live && Vox.ctx.state === 'running') {
-      // мастер
-      const L = smooth('mL', peakOf(Vox.live[0].aL)), R = smooth('mR', peakOf(Vox.live[0].aR));
-      const g = mm.getContext('2d'); g.clearRect(0, 0, mm.width, mm.height);
-      drawBar(g, 0, 0, mm.width, 6, levelToFrac(L), false); drawBar(g, 0, 8, mm.width, 6, levelToFrac(R), false);
-      // каналы микшера
-      if (wins.mixer) mixerMeters.forEach((c, i) => {
-        if (!c || !Vox.live[i]) return;
-        const l = smooth('l' + i, peakOf(Vox.live[i].aL)), r = smooth('r' + i, peakOf(Vox.live[i].aR));
-        const cg = c.getContext('2d'); cg.clearRect(0, 0, c.width, c.height);
-        drawBar(cg, 0, 0, 5, c.height, levelToFrac(l), true); drawBar(cg, 7, 0, 5, c.height, levelToFrac(r), true);
-      });
+      meterTo(mm, 0);
+      trackMeters.forEach((t) => meterTo(t.c, t.i));
+      if (fxpMeter && drawer.dataset.pane === 'fx') meterTo(fxpMeter, st.selectedInsert);
       if (Vox.micAnalyser) {
         const v = smooth('mic', peakOf(Vox.micAnalyser)); const gg = micM.getContext('2d');
-        gg.clearRect(0, 0, micM.width, micM.height); drawBar(gg, 0, 0, micM.width, micM.height, levelToFrac(v), false);
+        gg.clearRect(0, 0, micM.width, micM.height); drawBar(gg, 0, 0, micM.width, micM.height, levelToFrac(v));
       }
     }
     requestAnimationFrame(frame);
   }
 
-  /* ------------------------------ ПРОЕКТ: меню, отмена, окна ------------------------------ */
+  /* ------------------------------ ПРОЕКТ: меню, отмена ------------------------------ */
   const menu = $('projMenu'), menuBtn = $('btnProject');
   const setMenu = (open) => {
     menu.hidden = !open; menuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
@@ -1515,38 +1694,34 @@
     const yes = el('button', 'primary', 'Восстановить'), no = el('button', '', 'Не нужно');
     yes.onclick = () => { bar.remove(); Vox.autosave.restore(); };
     no.onclick = () => bar.remove();
-    box.append(yes, no); bar.appendChild(box); hintEl.after(bar);
+    box.append(yes, no); bar.appendChild(box); $('topbar').after(bar);
   });
 
   // после отмены, открытия или нового проекта — обновить всё, что показано
   Vox.on('project', () => {
     $('bpm').value = st.bpm; $('projName').textContent = st.projectName;
-    syncTransport();
-    if (wins.rack) buildRack(wins.rack.body);
+    syncKey(); syncMaster(); syncTransport();
+    buildRack($('paneBeat'));
     Object.keys(wins).filter((id) => id.startsWith('plug-')).forEach((id) => {
       const [, i, k] = id.split('-').map(Number);
       const s = st.mixer[i] && st.mixer[i].fx[k];
       closeWindow(id);
       if (s) openPlugin(i, k);
     });
-    renderMixer(); renderBrowser();
+    renderFxPane(); renderBrowser(); syncRecPane();
   });
 
-  /* ------------------------------ ТЕЛЕФОН: вкладки ------------------------------ */
-  const mobileMQ = matchMedia('(max-width: 820px)');
-  const appEl = $('app');
-  function setTab(t) {
-    appEl.dataset.tab = t;
-    document.querySelectorAll('#mtabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === t));
-    if (t === 'rack' && !wins.rack) OPENERS.rack();
-    if (t === 'mixer' && !wins.mixer) OPENERS.mixer();
-    if (t === 'browser') $('workspace').classList.remove('no-browser');
-    requestAnimationFrame(() => { if (t === 'playlist') renderPlaylist(); });
+  /* ------------------------------ ТЕЛЕФОН: режимы снизу ------------------------------ */
+  function setView(v) {
+    appEl.dataset.view = v;
+    document.querySelectorAll('#mtabs button').forEach((b) => { const on = b.dataset.view === v; b.classList.toggle('on', on); b.setAttribute('aria-current', on ? 'page' : 'false'); });
+    if (v !== 'tracks' && drawer.dataset.pane !== v) openDrawer(v);
+    else if (v !== 'tracks') renderDrawer();
+    requestAnimationFrame(() => { if (v === 'tracks') renderPlaylist(); });
   }
-  document.querySelectorAll('#mtabs button').forEach((b) => (b.onclick = () => setTab(b.dataset.tab)));
-  Vox.isMobile = () => mobileMQ.matches;
+  document.querySelectorAll('#mtabs button').forEach((b) => (b.onclick = () => setView(b.dataset.view)));
   // раскладка Rack своя для телефона и компьютера — пересобрать при смене режима
-  mobileMQ.addEventListener('change', () => { if (wins.rack) buildRack(wins.rack.body); });
+  mobileMQ.addEventListener('change', () => { buildRack($('paneBeat')); if (!Vox.isMobile()) setView('tracks'); renderPlaylist(); });
 
   /* ------------------------------ ГОРЯЧИЕ КЛАВИШИ ------------------------------ */
   document.addEventListener('keydown', (e) => {
@@ -1554,17 +1729,19 @@
     const mod = e.ctrlKey || e.metaKey;
     if (mod && e.code === 'KeyS') { e.preventDefault(); Vox.saveProject(); return; }
     if (mod && e.code === 'KeyO') { e.preventDefault(); $('projOpenInput').click(); return; }
-    if (typing) return;
+    if (typing || e.defaultPrevented) return;
     if (mod && e.code === 'KeyZ' && !e.shiftKey) { e.preventDefault(); Vox.history.undo(); return; }
     if (mod && (e.code === 'KeyY' || (e.code === 'KeyZ' && e.shiftKey))) { e.preventDefault(); Vox.history.redo(); return; }
     if (!mod && e.code === 'KeyS') { e.preventDefault(); Vox.splitAtCursor(); return; }
-    if (e.code === 'Space') { e.preventDefault(); Vox.togglePlay(); }
-    else if (e.key === 'r' || e.key === 'R' || e.key === 'к' || e.key === 'К') { if (!e.ctrlKey && !e.metaKey) Vox.toggleRecord(); }
-    else if (e.key === 'F6') { e.preventDefault(); toggleWindow('rack'); }
-    else if (e.key === 'F9') { e.preventDefault(); toggleWindow('mixer'); }
+    if (e.code === 'Space') { e.preventDefault(); playPause(); }
+    else if (!mod && e.code === 'KeyR') record();
+    else if (!mod && e.code === 'KeyL') toggleLoop();
+    else if (e.key === 'Home') { e.preventDefault(); Vox.setPosition(0); }
+    else if (e.key === 'F6') { e.preventDefault(); openDrawer('beat'); }
+    else if (e.key === 'F9') { e.preventDefault(); openDrawer('fx'); }
     else if (e.key === 'F8') { e.preventDefault(); $('wbBrowser').click(); }
     else if ((e.key === 'Delete' || e.key === 'Backspace') && st.selectedClip != null) { e.preventDefault(); Vox.deleteClip(st.selectedClip); }
-    else if ((e.ctrlKey || e.metaKey) && (e.code === 'KeyD' || e.code === 'KeyB')) {
+    else if (mod && (e.code === 'KeyD' || e.code === 'KeyB')) {
       e.preventDefault();
       if (st.selectedClip != null) Vox.duplicateClip(st.selectedClip); else Vox.duplicateTrack(st.selectedTrack);
     }
@@ -1579,11 +1756,10 @@
   });
 
   $('projName').textContent = st.projectName;
-  renderBrowser(); renderPlaylist(); syncTransport();
-  requestAnimationFrame(() => {
-    OPENERS.rack(); OPENERS.mixer();
-    syncWindowButtons();
-  });
+  syncKey(); syncMaster(); syncLibraryBtn();
+  renderBrowser(); renderPlaylist(); syncTransport(); syncRecPane();
+  buildRack($('paneBeat')); openDrawer('fx');
+  if (Vox.isMobile()) setView('tracks');
   Vox.init().catch(() => {});
   requestAnimationFrame(frame);
   window.addEventListener('resize', () => renderPlaylist());

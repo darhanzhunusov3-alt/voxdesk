@@ -20,6 +20,12 @@ function voxWorkletModule() {
     pentaMinor: [0,3,5,7,10],
     pentaMajor: [0,2,4,7,9]
   };
+  // позиция песни в долях для процессоров, которым нужен темп (VocalChain, ShkaFX);
+  // при зацикливании [loopA, loopB) позиция заворачивается так же, как курсор в студии
+  function songBeat(t, now) {
+    const b = t.startBeat + (now - t.t0 + t.ahead) * t.bpm / 60;
+    return t.loopB > t.loopA && t.startBeat < t.loopB && b >= t.loopB ? t.loopA + (b - t.loopB) % (t.loopB - t.loopA) : b;
+  }
 
   /* ---------------------------- АВТОТЮН ----------------------------
      Определение ноты: YIN на сигнале с половинной частотой + уточнение на полной.
@@ -438,7 +444,7 @@ function voxWorkletModule() {
       const f = this.f32(), l = this.pL / 4, r = this.pR / 4;
       if (a) { f.set(a, l); f.set(b, r); } else { f.fill(0, l, l + n); f.fill(0, r, r + n); }
       const t = this.tr;
-      e.vc_set_transport(t.bpm, t.playing ? 1 : 0, t.playing ? t.startBeat + (currentTime - t.t0 + t.ahead) * t.bpm / 60 : 0);
+      e.vc_set_transport(t.bpm, t.playing ? 1 : 0, t.playing ? songBeat(t, currentTime) : 0);
       e.vc_process(n);
       const g = this.f32();
       out[0].set(g.subarray(l, l + n));
@@ -511,7 +517,7 @@ function voxWorkletModule() {
       const a = inp && inp[0], b = inp && (inp[1] || inp[0]);
       const t = this.tr, sr = sampleRate;
       const playing = t.playing && !this.fileMode;
-      const pos = Math.round(((currentTime - t.t0) + t.ahead + t.startBeat * 60 / (t.bpm || 120)) * sr);
+      const pos = Math.round(songBeat(t, currentTime) * 60 / (t.bpm || 120) * sr);
       // 1) запись волны для выделений (до эффектов)
       if (playing && this.capOn && pos >= 0 && a) {
         if (this.capPos >= 0 && this.capPos + this.capN !== pos) this.flushCap();
