@@ -1,5 +1,7 @@
 /* =====================================================================
-   WOK Studio — ТЕМА ИНТЕРФЕЙСА (в стиле BandLab)
+   WOK Studio — ТЕМЫ ИНТЕРФЕЙСА
+   «BandLab Classic» — :root (по умолчанию), «Obsidian Signal» — [data-theme="obsidian"] ниже.
+   Тема выбирается в настройках (⚙), хранится в localStorage («wok-theme»), атрибут data-theme ставится на <html> и <body>.
    ---------------------------------------------------------------------
    Здесь собраны ВСЕ цвета, шрифты, размеры, градиенты и тени.
    Чтобы поменять дизайн, достаточно править этот файл.
@@ -168,4 +170,112 @@
     --rack-pad-x: 2px;  /* поля Rack по бокам: 8 × --tap-step + 2 × поле ≤ 360 px     */
     --mtabs-h: 58px;    /* нижний бар режимов (без safe-area)                         */
   }
+}
+
+/* =====================================================================
+   ТЕМА «OBSIDIAN SIGNAL» (палитра предложена gpt-6.1-sol)
+   Только цвета, градиенты, тени — размеры и шрифты общие (иначе сломалась бы мобильная раскладка).
+   --text-faint приглушён до #8a97a9 (5.8:1 на панели) — вторичный текст снова тише основного.
+   ===================================================================== */
+:root[data-theme="obsidian"] {
+  --bg-app: #090c11;
+  --bg-topbar: #131923;
+  --bg-panel: #151c26;
+  --bg-panel-2: #202a38;
+  --bg-panel-3: #2c3747;
+  --bg-inset: #080c12;
+  --bg-lane: #101620;
+  --bg-lane-alt: #0d121b;
+  --bg-head-sel: #223344;
+  --bg-overlay: rgba(3,6,11,.84);
+  --grad-app: radial-gradient(ellipse at 50% 0%, #182334 0%, #090c11 70%);
+  --grad-panel: linear-gradient(180deg, #19222e, #141b25);
+  --grad-topbar: linear-gradient(180deg, #1c2633, #111822);
+  --grad-title: linear-gradient(180deg, #243040, #19222e);
+  --grad-title-active: linear-gradient(180deg, #2a4051, #1c2b3a);
+  --grad-raised: linear-gradient(180deg, #303d4e, #202a38);
+  --grad-raised-hover: linear-gradient(180deg, #3b4a5e, #2a3748);
+  --grad-pressed: linear-gradient(180deg, #0b111a, #19232f);
+  --grad-accent: linear-gradient(180deg, #a4ffe0, #56edbb);
+  --grad-accent-2: linear-gradient(180deg, #ffdc95, #ffc16b);
+  --grad-rec: linear-gradient(180deg, #ffaaa9, #ff7485);
+  --grad-lcd: linear-gradient(180deg, #060a10, #101a24);
+  --grad-strip: linear-gradient(180deg, #1b2532, #111923);
+  --grad-strip-ret: linear-gradient(180deg, #1c2d40, #131e2c);
+  --grad-step: linear-gradient(180deg, #334154, #222d3c);
+  --grad-step-b: linear-gradient(180deg, #423b49, #2e2835);
+  --grad-step-on: linear-gradient(180deg, #a4ffe0, #56edbb);
+  --step-on-glow: 0 0 12px rgba(86,237,187,.3);
+  --knob-cap: radial-gradient(circle at 35% 24%, #647185 0%, #354151 36%, #1d2734 70%, #101721 100%);
+  --fader-cap: linear-gradient(180deg, #e2eaf2 0%, #a6b5c6 44%, #718499 49%, #c4d1de 54%, #8295aa 100%);
+  --fader-groove: #080c12;
+  --shadow-raised: inset 0 1px 0 #ffffff16, 0 2px 4px #00000066;
+  --shadow-pressed: inset 0 2px 5px #000000a6;
+  --shadow-inset: inset 0 2px 4px #00000099;
+  --shadow-panel: inset 0 1px 0 #ffffff0a, 0 8px 28px #00000040;
+  --shadow-window: 0 28px 80px #000000b3, 0 0 0 1px #ffffff14;
+  --shadow-knob: 0 3px 6px #000000b3, inset 0 1px 1px #ffffff33, inset 0 -2px 3px #00000080;
+  --shadow-fader: 0 3px 5px #000000b3, inset 0 1px 0 #ffffff99, 0 0 0 1px #05080d;
+  --glow-accent: 0 0 14px rgba(86,237,187,.25);
+  --glow-accent-2: 0 0 14px rgba(255,193,107,.23);
+  --glow-rec: 0 0 16px rgba(255,116,133,.35);
+  --glow-led: 0 0 8px rgba(123,255,208,.55);
+  --line: #303d4e;
+  --line-soft: #3b495c;
+  --grid-beat: rgba(190,215,245,.055);
+  --grid-bar: rgba(190,215,245,.17);
+  --text: #eff5fc;
+  --text-dim: #c1ccda;
+  --text-faint: #8a97a9;
+  --accent: #56edbb;
+  --accent-hi: #a4ffe0;
+  --accent-soft: rgba(86,237,187,.12);
+  --accent-text: #071b15;
+  --accent-2: #ffc16b;
+  --accent-2-soft: rgba(255,193,107,.12);
+  --accent-2-text: #241706;
+  --led-on: #7bffd0;
+  --led-off: #354254;
+  --rec: #ff7485;
+  --playhead: #e8fff7;
+  --loop: #56edbb;
+  --loop-soft: rgba(86,237,187,.16);
+  --ret: #91caff;
+  --route: #7bffd0;
+  --danger: #ff919c;
+  --meter-lo: #56edbb;
+  --meter-mid: #ffcf76;
+  --meter-hi: #ff7485;
+  --meter-bg: #060a10;
+  --knob-ring: #56edbb;
+  --knob-track: #354254;
+  --knob-send: #91caff;
+  --slider-track: #39485c;
+  --slider-fill: #56edbb;
+  --slider-thumb: #dce8f4;
+  --eq-grid: rgba(190,215,245,.1);
+  --eq-fill: rgba(86,237,187,.14);
+  --eq-band-1: #ff919c;
+  --eq-band-2: #ffc16b;
+  --eq-band-3: #f1e58d;
+  --eq-band-4: #56edbb;
+  --eq-band-5: #78e2e7;
+  --eq-band-6: #91caff;
+  --eq-band-7: #c4acff;
+  --fx-autotune: #56edbb;
+  --fx-vocalchain: #a4ffe0;
+  --fx-shkafx: #c4acff;
+  --fx-eq: #91caff;
+  --fx-reverb: #a8beff;
+  --fx-delay: #78e2e7;
+  --fx-chorus: #ffa5d1;
+  --fx-clipper: #ffc16b;
+  --clip-1: #56edbb;
+  --clip-2: #78e2e7;
+  --clip-3: #c4acff;
+  --clip-4: #ffa5d1;
+  --clip-5: #ffc16b;
+  --clip-6: #91caff;
+  --focus-ring: #b7ffe8;
+  --metal-line: #92a6bd;
 }

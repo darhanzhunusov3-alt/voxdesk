@@ -38,6 +38,17 @@
   дизайн VocalChain меняется в `plugins/vocalchain/ui/style.css`, ShkaFX — в `plugins/shkafx/ui/style.css`
   (правила в UI_API.md каждого плагина), затем `pack.py` в папке плагина.
 
+## Темы
+
+Тем две, переключаются в ⚙ Настройках и запоминаются в браузере:
+- **BandLab Classic** — переменные в `:root` в `theme.css` (по умолчанию);
+- **Obsidian Signal** — блок `:root[data-theme="obsidian"]` в конце `theme.css` (только цвета, градиенты, тени) и правила компонентов
+  в конце `app.css` с префиксом `:where(:root[data-theme="obsidian"])`.
+
+Новая тема делается так же: свой блок `:root[data-theme="имя"]` с цветами, при необходимости правила под `:where(:root[data-theme="имя"])`,
+и пункт в списке `THEMES` в `js/ui.js` (это единственное место в `js/`, которое для темы нужно тронуть — попроси Claude).
+Размеры, шрифты и всё внутри `@media (max-width: 820px)` в блок темы не переносить — сломается мобильная раскладка.
+
 ## Палитра и объём
 
 Всё задаётся переменными в `theme.css`, стиль меняется целиком в одном месте:
@@ -88,7 +99,7 @@
 `masterVol`, `masterMeter`, `btnMetro`, `wbBrowser`, `btnSave`, `btnExport`, `workspace`, `browser`, `brPlugins`, `brAudio`, `fileImport`,
 `playlist`, `addTrack`, `splitBtn`, `dupBtn`, `delBtn`, `btnPattern`, `zoomOut`, `zoomIn`, `plHeads`, `plScroll`, `plContent`, `ruler`,
 `lanes`, `loopRegion`, `playhead`, `drawer`, `drChannel`, `drClose`, `paneFx`, `paneBeat`, `paneRec`, `recBig`, `recTrack`, `micMeter`,
-`btnMonitor`, `latencyMs`, `audioInfo`, `hint`, `windows`, `mtabs`.
+`btnMonitor`, `latencyMs`, `audioInfo`, `hint`, `windows`, `mtabs`, `btnSettings`, `mSettings`.
 
 **Атрибуты-переключатели:** `data-pane` у `#drawer` и у кнопок `.dr-tab` (fx / beat / rec) — какая вкладка нижней панели открыта;
 `data-view` у `#app` и у кнопок в `#mtabs` (tracks / fx / beat / rec) — режим на телефоне.
@@ -124,6 +135,8 @@
 - EQ: `.eq-graph`, `.eq-bands`, `.eq-band`, `.eq-band.sel`, `.eq-band.out`, `.eq-band-head` (цвет полосы — переменная `--band`)
 - Soft Clipper: `.clip-top`, `.clip-graph`, `.clip-meter`, `.gr-label`, `.gr-bar`, `.gr-val`
 - ручка: `.knob`, `.knob.small`, `.knob-dial` (CSS-переменная `--p` от 0 до 1 = положение), `.knob-label`, `.knob-val`
+- настройки (шторка): `.set-label`, `.theme-list`, `.theme-opt`, `.theme-opt.on` (выбранная тема, атрибут `data-theme`), `.theme-sw` (полоски цветов), `.theme-tx`, `.set-note`
+- атрибут `data-theme` на `<html>` и `<body>`: `classic` | `obsidian`
 - меню и окна: `.menu-wrap`, `.menu`, `.menu-field`, `.menu-item`, `.menu-note`, `.modal-back`, `.modal`, `.m-btns`, `.hintbar.restore`, `.hint-actions`
 - библиотека: `.br-list li .dot`, `.dot.audio`, `.br-list li.empty`
 
