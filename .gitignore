@@ -1,2 +1,4 @@
 # ключи для scripts/ask-market.js
 scripts/.market-key
+node_modules/
+build/

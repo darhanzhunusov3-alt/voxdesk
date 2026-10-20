@@ -1,0 +1,28 @@
+{
+  "name": "voxdesk",
+  "version": "1.0.0",
+  "description": "WOK Studio — браузерная студия записи и сведения вокала",
+  "scripts": {
+    "build": "python build.py",
+    "sync": "python build.py && npx cap sync"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/darhanzhunusov3-alt/voxdesk.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/darhanzhunusov3-alt/voxdesk/issues"
+  },
+  "homepage": "https://github.com/darhanzhunusov3-alt/voxdesk#readme",
+  "private": true,
+  "dependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/cli": "^8.5.3",
+    "@capacitor/core": "^8.5.3",
+    "@capacitor/ios": "^8.5.3"
+  }
+}

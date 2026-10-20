@@ -89,7 +89,8 @@ js/shka-bundle.js   ShkaFX: wasm + родной интерфейс (генери
 plugins/vocalchain/ упаковка VocalChain: ui/, web/build.sh, pack.py
 plugins/shkafx/     упаковка ShkaFX: ui/, web/build.sh, web/patch.py, pack.py
 DESIGN.md           правила и готовый запрос для нейросети, которая правит дизайн
-build.py            собирает всё в один файл dist/wok-studio.html
+build.py            собирает всё в один файл dist/index.html (+ claude-artifacts/ — фрагмент для артефакта Claude)
+capacitor.config.json, android/, ios/   мобильные приложения (Capacitor)
 ```
 
 ## Как обновить плагины
@@ -102,6 +103,13 @@ build.py            собирает всё в один файл dist/wok-studio
 отключит фоновый поток, его заменяет Web Worker). Затем `python3 plugins/shkafx/pack.py`.
 
 В конце — `python3 build.py`.
+
+## Мобильные приложения
+
+`npm install` один раз, затем `npm run sync` — пересобрать студию и обновить проекты `android/` и `ios/`.
+- **iOS:** собирается в GitHub Actions (workflow «Build iOS») при push в main или вручную: Actions → Build iOS → Run workflow.
+  Готовый `VoxDesk-unsigned.ipa` — в Artifacts запуска; установить на iPhone — Sideloadly или AltStore с бесплатным Apple ID.
+- **Android:** `npx cap open android` в Android Studio → Build → Build APK.
 
 ## Дальше
 

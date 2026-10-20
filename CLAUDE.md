@@ -16,9 +16,16 @@
 - **Без сборщика и фреймворков:** чистый JS (ES2020), HTML, CSS. Все модули — IIFE, общий глобальный объект `window.Vox`.
 - Порядок подключения в `index.html` важен:
   `vc-bundle.js` → `shka-bundle.js` → `shka-worker.js` → `worklets.js` → `engine.js` → `project.js` → `ui.js`.
-- **Сборка одного файла:** `python3 build.py` → `dist/wok-studio.html` (всё встроено) и `dist/wok-studio-artifact.html`
-  (фрагмент без `<html>/<head>/<body>` для публикации как артефакт Claude). В `build.py` внутри встроенных скриптов
-  экранируются `</script` и `<!--` — строки с интерфейсами плагинов их содержат.
+- **Сборка одного файла:** `python3 build.py` → `dist/index.html` (всё встроено; в `dist/` больше ничего нет — это webDir мобильных приложений)
+  и `claude-artifacts/wok-studio-artifact.html` (фрагмент без `<html>/<head>/<body>` для публикации как артефакт Claude; `<body …>` ищется регуляркой —
+  у тега есть `data-theme`). В `build.py` внутри встроенных скриптов экранируются `</script` и `<!--` — строки с интерфейсами плагинов их содержат.
+- **Мобильные приложения (Capacitor 8, 2026-10-20):** `capacitor.config.json` (appName «VoxDesk», appId `com.voxdesk.app`, `webDir: dist`).
+  `npm run sync` = `build.py` + `npx cap sync` (копирует `dist/` в `android/app/src/main/assets/public` и `ios/App/App/public` — эти копии в git не идут).
+  Платформы `android/` (Gradle) и `ios/` (Xcode, Swift Package Manager — проект генерируется и на Windows, собирается только на macOS).
+  Микрофон: Android — `RECORD_AUDIO` + `MODIFY_AUDIO_SETTINGS` в `AndroidManifest.xml`, iOS — `NSMicrophoneUsageDescription` в `Info.plist`.
+  **iOS в CI:** `.github/workflows/build-ios.yml` — `macos-latest`, `npm ci` → `npm run sync` → `xcodebuild` (схема App, Release, iphoneos,
+  `CODE_SIGNING_ALLOWED=NO`) → неподписанный `VoxDesk-unsigned.ipa` в Artifacts (14 дней); подпись при установке — Sideloadly/AltStore.
+  Запуск — push в main с изменениями студии/ios/конфига или вручную (Run workflow). Android APK ещё не собирался (нет Android SDK).
 - **Запуск:** `python -m http.server 8000` в корне → `http://localhost:8000` (микрофон работает только на https/localhost).
   Хостинг — GitHub Pages.
 - Плагины пользователя (C++) собраны в **WebAssembly** (wasi-sdk 24, `wasm32-wasip1`, reactor) и работают побитово
@@ -45,7 +52,9 @@ plugins/vocalchain/   ui/ (родной интерфейс), vocalchain.wasm, vc
 plugins/shkafx/       ui/ (+fonts/Inter), shkafx.wasm, web/build.sh, web/patch.py, web/shim/, web/shka_web.cpp, pack.py
 DESIGN.md             правила правки дизайна другими ИИ (Gemini): что можно менять, список id/классов, готовый промпт
 README.md             для пользователя: запуск, возможности, горячие клавиши, как обновлять плагины
-build.py              сборка dist/
+build.py              сборка dist/index.html и claude-artifacts/
+capacitor.config.json, package.json, android/, ios/   мобильные приложения (Capacitor)
+.github/workflows/build-ios.yml                      сборка iOS на macOS в GitHub Actions
 ```
 
 ## 3. Архитектура
